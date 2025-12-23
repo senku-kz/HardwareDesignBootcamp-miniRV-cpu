@@ -1,0 +1,52 @@
+# Build artifacts
+*.o
+*.a
+*.so
+*.exe
+miniRV_tb
+V*
+
+# Verilator output
+obj_dir/
+*.d
+*.mk
+
+# iverilog output
+*.vvp
+*.vcd
+*.lxt
+*.fst
+
+# Waveform files
+*.vcd
+*.fst
+*.lxt
+*.vpd
+*.fsdb
+
+# Log files
+*.log
+*.out
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+
+# Coverage files
+*.gcda
+*.gcno
+*.gcov
+
+# Python cache (if any Python scripts)
+__pycache__/
+*.pyc
+*.pyo
