@@ -121,6 +121,8 @@ module control_unit(
             // S-Type (Store)
             5'b01000: begin
                 // S-Type (Store) (STORE)
+                register_destination = instr_rd;
+                function_3 = instr_funct3;
                 register_source_1 = instr_rs1;
                 register_source_2 = instr_rs2;
                 immediate_7bit = instr_imm_7bit;
