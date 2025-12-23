@@ -31,6 +31,7 @@ void reset_pc(Vprogram_counter* pc, VerilatedVcdC* tfp, uint64_t& time) {
     pc->reset = 0;
 }
 
+
 bool test_reset(Vprogram_counter* pc, VerilatedVcdC* tfp, uint64_t& time) {
     initialize_signals(pc);
     expected_value = 0x00;
