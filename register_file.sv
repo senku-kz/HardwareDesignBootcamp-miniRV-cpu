@@ -10,6 +10,7 @@ module register_file (
     input  logic [3:0]  raddr2,       // read address 2 (rs2)
     input  logic [3:0]  waddr,        // write address (rd)
     input  logic [31:0] wdata,        // write data
+    
     output logic [31:0] rdata1,       // read data 1
     output logic [31:0] rdata2        // read data 2
 );
