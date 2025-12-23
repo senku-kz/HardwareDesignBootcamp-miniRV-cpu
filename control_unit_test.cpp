@@ -146,7 +146,7 @@ bool test_i_type_instruction(Vcontrol_unit* cu, VerilatedVcdC* tfp, uint64_t& ti
     uint8_t expected_register_source_1 = 0b00001;
     uint8_t expected_function_3 = 0b001;
     uint16_t expected_immediate_12bit = 0x001;
-    uint32_t sign_bit = 0;
+    uint8_t sign_bit = 0;
     uint32_t expected_immediate_32bit = expected_immediate_12bit | (sign_bit ? 0xFFFFF000 : 0);
 
     if (instruction != 0x00) {
@@ -231,36 +231,46 @@ bool test_s_type_instruction(Vcontrol_unit* cu, VerilatedVcdC* tfp, uint64_t& ti
         std::cout << "without instruction";
     }
     std::cout << "\n";
-    std::cout << "  Format: [immediate(31:25) | rs2(24:20) | rs1(19:15) | funct3(14:12) | opcode(6:0)]\n";
+    std::cout << "  Format: [immediate(31:25) | rs2(24:20) | rs1(19:15) | funct3(14:12) | immediate(11:7) | opcode(6:0)]\n";
 
     // S-Type instruction format: [immediate(31:25) | rs2(24:20) | rs1(19:15) | funct3(14:12) | opcode(6:0)]
     // Example: sw x1, 0(x2) -> 0x00002023
-    // immediate=0b0000001 (7 bits), rs2=0b00001 (5 bits), rs1=0b00001 (5 bits), funct3=0b000 (3 bits), opcode=0b0100011 (7 bits)
+    // immediate=0b0000001 (7 bits), rs2=0b00001 (5 bits), rs1=0b00001 (5 bits), funct3=0b000 (3 bits), immediate=0b0000001 (5 bits), opcode=0b0100011 (7 bits)
     uint8_t expected_opcode = 0b0100011;
+    uint8_t expected_immediate_5bit = 0b00001;
+    uint8_t expected_function_3 = 0b000;
     uint8_t expected_register_source_1 = 0b00001;
     uint8_t expected_register_source_2 = 0b00001;
-    uint8_t expected_function_3 = 0b000;
-    uint16_t expected_immediate_7bit = 0b000000000000000000001;
-    uint32_t expected_immediate_32bit = 0x01;
+    uint8_t expected_immediate_7bit = 0b0000001;
+    uint8_t sign_bit = 0;
+    uint32_t expected_immediate_32bit = (sign_bit ? 0xFFFFF800 : 0) | expected_immediate_7bit << 5 | expected_immediate_5bit;
 
     if (instruction != 0x00) {
         // Extract instruction fields using bit masks and shifts (C++ syntax)
         expected_opcode = (instruction >> 0) & 0x7F;              // bits [6:0]
-        expected_register_source_1 = (instruction >> 7) & 0x1F;    // bits [11:7]
-        expected_register_source_2 = (instruction >> 12) & 0x1F;    // bits [19:15]
-        expected_function_3 = (instruction >> 15) & 0x7;           // bits [14:12]
-        expected_immediate_7bit = (instruction >> 20) & 0x7F;      // bits [31:25]
-        expected_immediate_32bit = (instruction >> 20) & 0x7F;    // bits [31:25]
+        expected_immediate_5bit = (instruction >> 7) & 0x1F;    // bits [11:7]
+        expected_function_3 = (instruction >> 12) & 0x7;           // bits [14:12]
+        expected_register_source_1 = (instruction >> 15) & 0x1F;    // bits [19:15]
+        expected_register_source_2 = (instruction >> 20) & 0x1F;    // bits [24:20]
+        expected_immediate_7bit = (instruction >> 25) & 0x7F;      // bits [31:25]
+        sign_bit = (instruction >> 31) & 1;  // Extract sign bit from bit 31
+        expected_immediate_32bit = (sign_bit ? 0xFFFFF800 : 0) | expected_immediate_7bit << 5 | expected_immediate_5bit;
     }
 
     uint8_t real_opcode = 0x00;
+    uint8_t real_immediate_5bit = 0x00;
+    uint8_t real_function_3 = 0x00;
     uint8_t real_register_source_1 = 0x00;
     uint8_t real_register_source_2 = 0x00;
-    uint8_t real_function_3 = 0x00;
-    uint16_t real_immediate_7bit = 0x00;
+    uint8_t real_immediate_7bit = 0x00;
     uint32_t real_immediate_32bit = 0x00;
     
-    uint32_t s_type_instr_op = expected_immediate_7bit << 25 | expected_register_source_2 << 20 | expected_register_source_1 << 15 | expected_function_3 << 12 | expected_opcode;
+    uint32_t s_type_instr_op = expected_immediate_7bit << 25 
+    | expected_register_source_2 << 20 
+    | expected_register_source_1 << 15 
+    | expected_function_3 << 12 
+    | expected_immediate_5bit << 7
+    | expected_opcode;
 
     std::cout << "  Expected: " << std::bitset<32>(s_type_instr_op) << "\n";
 
@@ -269,9 +279,10 @@ bool test_s_type_instruction(Vcontrol_unit* cu, VerilatedVcdC* tfp, uint64_t& ti
     tfp->dump(time++);
 
     real_opcode = cu->opcode;
+    real_immediate_5bit = cu->register_destination;
+    real_function_3 = cu->function_3;
     real_register_source_1 = cu->register_source_1;
     real_register_source_2 = cu->register_source_2;
-    real_function_3 = cu->function_3;
     real_immediate_7bit = cu->immediate_7bit;
     real_immediate_32bit = cu->immediate_32bit;
 
@@ -280,6 +291,18 @@ bool test_s_type_instruction(Vcontrol_unit* cu, VerilatedVcdC* tfp, uint64_t& ti
         return 1;
     }
     std::cout << "  OK   \t opcode=" << std::bitset<7>(real_opcode) << " (expected " << std::bitset<7>(expected_opcode) << ")\n";
+
+    if (real_immediate_5bit != expected_immediate_5bit) {
+        std::cerr << "  FAIL \t immediate_5bit=" << std::bitset<5>(real_immediate_5bit) << ", expected=" << std::bitset<5>(expected_immediate_5bit) << "\n";
+        return 1;
+    }
+    std::cout << "  OK   \t immediate_5bit=" << std::bitset<5>(real_immediate_5bit) << " (expected " << std::bitset<5>(expected_immediate_5bit) << ")\n";
+
+    if (real_function_3 != expected_function_3) {
+        std::cerr << "  FAIL \t function_3=" << std::bitset<3>(real_function_3) << ", expected=" << std::bitset<3>(expected_function_3) << "\n";
+        return 1;
+    }
+    std::cout << "  OK   \t function_3=" << std::bitset<3>(real_function_3) << " (expected " << std::bitset<3>(expected_function_3) << ")\n";
 
     if (real_register_source_1 != expected_register_source_1) {
         std::cerr << "  FAIL \t register_source_1=" << std::bitset<5>(real_register_source_1) << " (expected " << std::bitset<5>(expected_register_source_1) << ")\n";
@@ -292,12 +315,6 @@ bool test_s_type_instruction(Vcontrol_unit* cu, VerilatedVcdC* tfp, uint64_t& ti
         return 1;
     }
     std::cout << "  OK   \t register_source_2=" << std::bitset<5>(real_register_source_2) << " (expected " << std::bitset<5>(expected_register_source_2) << ")\n";
-
-    if (real_function_3 != expected_function_3) {
-        std::cerr << "  FAIL \t function_3=" << std::bitset<3>(real_function_3) << ", expected=" << std::bitset<3>(expected_function_3) << "\n";
-        return 1;
-    }
-    std::cout << "  OK   \t function_3=" << std::bitset<3>(real_function_3) << " (expected " << std::bitset<3>(expected_function_3) << ")\n";
 
     if (real_immediate_7bit != expected_immediate_7bit) {
         std::cerr << "  FAIL \t immediate_7bit=" << std::bitset<7>(real_immediate_7bit) << ", expected=" << std::bitset<7>(expected_immediate_7bit) << "\n";
