@@ -313,6 +313,7 @@ bool test_s_type_instruction(Vcontrol_unit* cu, VerilatedVcdC* tfp, uint64_t& ti
     return true;
 }
 
+
 bool test_u_type_instruction(Vcontrol_unit* cu, VerilatedVcdC* tfp, uint64_t& time, uint32_t instruction = 0x00) {
     std::cout << "Test: U-Type (LUI/AUIPC) ";
     if (instruction != 0x00) {

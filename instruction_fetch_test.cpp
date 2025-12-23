@@ -6,7 +6,7 @@
 #include <vector>
 #include <verilated.h>
 #include <verilated_vcd_c.h>
-#include "Vinstruction_memory.h"
+#include "Vinstruction_fetch.h"
 
 const std::string TEST_PROGRAM_FILE = "logisim-bin/test-pc4.hex";
 int MEMORY_SIZE = 16;
@@ -32,7 +32,7 @@ void read_hex_file(std::string filename, uint32_t* memory) {
 }
 
 
-bool test_read_all_initialized_instructions(Vinstruction_memory* rom, VerilatedVcdC* tfp, uint64_t& time) {
+bool test_read_all_initialized_instructions(Vinstruction_fetch* rom, VerilatedVcdC* tfp, uint64_t& time) {
     uint32_t memory[MEMORY_SIZE];
     read_hex_file(TEST_PROGRAM_FILE, memory);
 
@@ -59,7 +59,7 @@ bool test_read_all_initialized_instructions(Vinstruction_memory* rom, VerilatedV
 }
 
 
-bool test_immediate_response(Vinstruction_memory* rom, VerilatedVcdC* tfp, uint64_t& time) {
+bool test_immediate_response(Vinstruction_fetch* rom, VerilatedVcdC* tfp, uint64_t& time) {
     uint32_t memory[MEMORY_SIZE];
     read_hex_file(TEST_PROGRAM_FILE, memory);
 
@@ -87,7 +87,7 @@ bool test_immediate_response(Vinstruction_memory* rom, VerilatedVcdC* tfp, uint6
 }
 
 
-bool test_full_address_space_coverage(Vinstruction_memory* rom, VerilatedVcdC* tfp, uint64_t& time) {
+bool test_full_address_space_coverage(Vinstruction_fetch* rom, VerilatedVcdC* tfp, uint64_t& time) {
     uint32_t memory[MEMORY_SIZE];
     read_hex_file(TEST_PROGRAM_FILE, memory);
 
@@ -113,9 +113,9 @@ int main(int argc, char** argv) {
     Verilated::traceEverOn(true);
     
     // Create module and VCD trace
-    Vinstruction_memory* rom = new Vinstruction_memory;
+    Vinstruction_fetch* instruction_fetch = new Vinstruction_fetch;
     VerilatedVcdC* tfp = new VerilatedVcdC;
-    rom->trace(tfp, 99);
+    instruction_fetch->trace(tfp, 99);
     tfp->open("waveform_rom.vcd");
     
     uint64_t time = 0;
@@ -125,24 +125,24 @@ int main(int argc, char** argv) {
     
     // Test 1: Read all initialized instructions
     std::cout << "Test 1: Read all initialized instructions\n";
-    test_read_all_initialized_instructions(rom, tfp, time);
+    test_read_all_initialized_instructions(instruction_fetch, tfp, time);
     
     // Test 2: Combinational property - immediate response to address change
     std::cout << "\nTest 2: Combinational logic (immediate response)\n";
-    test_immediate_response(rom, tfp, time);
+    test_immediate_response(instruction_fetch, tfp, time);
 
     
     // Test 3: All addresses are readable
     std::cout << "\nTest 3: Full address space coverage\n";
-    test_full_address_space_coverage(rom, tfp, time);
+    test_full_address_space_coverage(instruction_fetch, tfp, time);
 
     
     // Cleanup
     tfp->close();
     delete tfp;
-    delete rom;
+    delete instruction_fetch;
     
     std::cout << "\nAll tests passed!\n";
-    std::cout << "VCD file: waveform_rom.vcd\n";
+    std::cout << "VCD file: waveform_instruction_fetch.vcd\n";
     return 0;
 }
