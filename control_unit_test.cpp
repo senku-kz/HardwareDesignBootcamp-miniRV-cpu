@@ -348,20 +348,20 @@ bool test_u_type_instruction(Vcontrol_unit* cu, VerilatedVcdC* tfp, uint64_t& ti
     // immediate=0b00000000000000000000 (20 bits), rd=0b00001 (5 bits), opcode=0b0110111 (7 bits)
     uint8_t expected_opcode = 0b0110111;
     uint8_t expected_register_destination = 0b00001;
-    uint16_t expected_immediate_20bit = 0b00000000000000000000;
-    uint32_t expected_immediate_32bit = 0x00;
+    uint32_t expected_immediate_20bit = 0x00001;
+    uint32_t expected_immediate_32bit = expected_immediate_20bit << 12;
 
     if (instruction != 0x00) {
         // Extract instruction fields using bit masks and shifts (C++ syntax)
         expected_opcode = (instruction >> 0) & 0x7F;              // bits [6:0]
         expected_register_destination = (instruction >> 7) & 0x1F;  // bits [11:7]
         expected_immediate_20bit = (instruction >> 12) & 0xFFFFF;    // bits [31:12]
-        expected_immediate_32bit = (instruction >> 12) & 0xFFFFF;    // bits [31:12]
+        expected_immediate_32bit = expected_immediate_20bit << 12;    // bits [31:12]
     }
 
     uint8_t real_opcode = 0x00;
     uint8_t real_register_destination = 0x00;
-    uint16_t real_immediate_20bit = 0x00;
+    uint32_t real_immediate_20bit = 0x00;
     uint32_t real_immediate_32bit = 0x00;
     
     uint32_t u_type_instr_op = expected_immediate_20bit << 12 | expected_register_destination << 7 | expected_opcode;
