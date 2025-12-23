@@ -190,31 +190,31 @@ bool test_i_type_instruction(Vcontrol_unit* cu, VerilatedVcdC* tfp, uint64_t& ti
 
     if (real_register_destination != expected_register_destination) {
         std::cerr << "  FAIL \t register_destination=" << std::bitset<5>(real_register_destination) << ", expected=" << std::bitset<5>(expected_register_destination) << "\n";
-        return 1;
+        return false;
     }
     std::cout << "  OK   \t register_destination=" << std::bitset<5>(real_register_destination) << " (expected " << std::bitset<5>(expected_register_destination) << ")\n";
 
     if (real_function_3 != expected_function_3) {
         std::cerr << "  FAIL \t function_3=" << std::bitset<3>(real_function_3) << ", expected=" << std::bitset<3>(expected_function_3) << "\n";
-        return 1;
+        return false;
     }
     std::cout << "  OK   \t function_3=" << std::bitset<3>(real_function_3) << " (expected " << std::bitset<3>(expected_function_3) << ")\n";
 
     if (real_register_source_1 != expected_register_source_1) {
         std::cerr << "  FAIL \t register_source_1=" << std::bitset<5>(real_register_source_1) << " (expected " << std::bitset<5>(expected_register_source_1) << ")\n";
-        return 1;
+        return false;
     }
     std::cout << "  OK   \t register_source_1=" << std::bitset<5>(real_register_source_1) << " (expected " << std::bitset<5>(expected_register_source_1) << ")\n";
 
     if (real_immediate_12bit != expected_immediate_12bit) {
         std::cerr << "  FAIL \t immediate_12bit=" << std::bitset<12>(real_immediate_12bit) << ", expected=" << std::bitset<12>(expected_immediate_12bit) << "\n";
-        return 1;
+        return false;
     }
     std::cout << "  OK   \t immediate_12bit=" << std::bitset<12>(real_immediate_12bit) << " (expected " << std::bitset<12>(expected_immediate_12bit) << ")\n";
 
     if (real_immediate_32bit != expected_immediate_32bit) {
         std::cerr << "  FAIL \t immediate_32bit=" << std::bitset<32>(real_immediate_32bit) << ", expected=" << std::bitset<32>(expected_immediate_32bit) << "\n";
-        return 1;
+        return false;
     }
     std::cout << "  OK   \t immediate_32bit=" << std::bitset<32>(real_immediate_32bit) << " (expected " << std::bitset<32>(expected_immediate_32bit) << ")\n";
 
@@ -288,43 +288,43 @@ bool test_s_type_instruction(Vcontrol_unit* cu, VerilatedVcdC* tfp, uint64_t& ti
 
     if (real_opcode != expected_opcode) {
         std::cerr << "  FAIL \t opcode=" << std::bitset<7>(real_opcode) << ", expected=" << std::bitset<7>(expected_opcode) << "\n";
-        return 1;
+        return false;
     }
     std::cout << "  OK   \t opcode=" << std::bitset<7>(real_opcode) << " (expected " << std::bitset<7>(expected_opcode) << ")\n";
 
     if (real_immediate_5bit != expected_immediate_5bit) {
         std::cerr << "  FAIL \t immediate_5bit=" << std::bitset<5>(real_immediate_5bit) << ", expected=" << std::bitset<5>(expected_immediate_5bit) << "\n";
-        return 1;
+        return false;
     }
     std::cout << "  OK   \t immediate_5bit=" << std::bitset<5>(real_immediate_5bit) << " (expected " << std::bitset<5>(expected_immediate_5bit) << ")\n";
 
     if (real_function_3 != expected_function_3) {
         std::cerr << "  FAIL \t function_3=" << std::bitset<3>(real_function_3) << ", expected=" << std::bitset<3>(expected_function_3) << "\n";
-        return 1;
+        return false;
     }
     std::cout << "  OK   \t function_3=" << std::bitset<3>(real_function_3) << " (expected " << std::bitset<3>(expected_function_3) << ")\n";
 
     if (real_register_source_1 != expected_register_source_1) {
         std::cerr << "  FAIL \t register_source_1=" << std::bitset<5>(real_register_source_1) << " (expected " << std::bitset<5>(expected_register_source_1) << ")\n";
-        return 1;
+        return false;
     }
     std::cout << "  OK   \t register_source_1=" << std::bitset<5>(real_register_source_1) << " (expected " << std::bitset<5>(expected_register_source_1) << ")\n";
 
     if (real_register_source_2 != expected_register_source_2) {
         std::cerr << "  FAIL \t register_source_2=" << std::bitset<5>(real_register_source_2) << " (expected " << std::bitset<5>(expected_register_source_2) << ")\n";
-        return 1;
+        return false;
     }
     std::cout << "  OK   \t register_source_2=" << std::bitset<5>(real_register_source_2) << " (expected " << std::bitset<5>(expected_register_source_2) << ")\n";
 
     if (real_immediate_7bit != expected_immediate_7bit) {
         std::cerr << "  FAIL \t immediate_7bit=" << std::bitset<7>(real_immediate_7bit) << ", expected=" << std::bitset<7>(expected_immediate_7bit) << "\n";
-        return 1;
+        return false;
     }
     std::cout << "  OK   \t immediate_7bit=" << std::bitset<7>(real_immediate_7bit) << " (expected " << std::bitset<7>(expected_immediate_7bit) << ")\n";
 
     if (real_immediate_32bit != expected_immediate_32bit) {
         std::cerr << "  FAIL \t immediate_32bit=" << std::bitset<32>(real_immediate_32bit) << ", expected=" << std::bitset<32>(expected_immediate_32bit) << "\n";
-        return 1;
+        return false;
     }
     std::cout << "  OK   \t immediate_32bit=" << std::bitset<32>(real_immediate_32bit) << " (expected " << std::bitset<32>(expected_immediate_32bit) << ")\n";
 
@@ -379,25 +379,25 @@ bool test_u_type_instruction(Vcontrol_unit* cu, VerilatedVcdC* tfp, uint64_t& ti
 
     if (real_opcode != expected_opcode) {
         std::cerr << "  FAIL \t opcode=" << std::bitset<7>(real_opcode) << ", expected=" << std::bitset<7>(expected_opcode) << "\n";
-        return 1;
+        return false;
     }
     std::cout << "  OK   \t opcode=" << std::bitset<7>(real_opcode) << " (expected " << std::bitset<7>(expected_opcode) << ")\n";
 
     if (real_register_destination != expected_register_destination) {
         std::cerr << "  FAIL \t register_destination=" << std::bitset<5>(real_register_destination) << ", expected=" << std::bitset<5>(expected_register_destination) << "\n";
-        return 1;
+        return false;
     }
     std::cout << "  OK   \t register_destination=" << std::bitset<5>(real_register_destination) << " (expected " << std::bitset<5>(expected_register_destination) << ")\n";
 
     if (real_immediate_20bit != expected_immediate_20bit) { 
         std::cerr << "  FAIL \t immediate_20bit=" << std::bitset<20>(real_immediate_20bit) << ", expected=" << std::bitset<20>(expected_immediate_20bit) << "\n";
-        return 1;
+        return false;
     }
     std::cout << "  OK   \t immediate_20bit=" << std::bitset<20>(real_immediate_20bit) << " (expected " << std::bitset<20>(expected_immediate_20bit) << ")\n";
 
     if (real_immediate_32bit != expected_immediate_32bit) {
         std::cerr << "  FAIL \t immediate_32bit=" << std::bitset<32>(real_immediate_32bit) << ", expected=" << std::bitset<32>(expected_immediate_32bit) << "\n";
-        return 1;
+        return false;
     }
     std::cout << "  OK   \t immediate_32bit=" << std::bitset<32>(real_immediate_32bit) << " (expected " << std::bitset<32>(expected_immediate_32bit) << ")\n";
 
@@ -418,7 +418,7 @@ int main(int argc, char** argv) {
     tfp->open("waveform_cu.vcd");
     
     uint64_t time = 0;
-    int test_result = 0;
+    bool test_result = false;
     int test_count = 0;
     int test_success = 0;
 
