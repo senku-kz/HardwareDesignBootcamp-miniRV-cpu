@@ -313,6 +313,79 @@ bool test_s_type_instruction(Vcontrol_unit* cu, VerilatedVcdC* tfp, uint64_t& ti
     return true;
 }
 
+bool test_u_type_instruction(Vcontrol_unit* cu, VerilatedVcdC* tfp, uint64_t& time, uint32_t instruction = 0x00) {
+    std::cout << "Test: U-Type (LUI/AUIPC) ";
+    if (instruction != 0x00) {
+        std::cout << "with instruction 0x" << std::setfill('0') << std::setw(8) << std::hex << instruction << std::dec;
+    } else {
+        std::cout << "without instruction";
+    }
+    std::cout << "\n";
+    std::cout << "  Format: [immediate(31:12) | rd(11:7) | opcode(6:0)]\n";
+
+    // U-Type instruction format: [immediate(31:12) | rd(11:7) | opcode(6:0)]
+    // Example: lui x1, 1024 -> 0x00004037
+    // immediate=0b00000000000000000000 (20 bits), rd=0b00001 (5 bits), opcode=0b0110111 (7 bits)
+    uint8_t expected_opcode = 0b0110111;
+    uint8_t expected_register_destination = 0b00001;
+    uint16_t expected_immediate_20bit = 0b00000000000000000000;
+    uint32_t expected_immediate_32bit = 0x00;
+
+    if (instruction != 0x00) {
+        // Extract instruction fields using bit masks and shifts (C++ syntax)
+        expected_opcode = (instruction >> 0) & 0x7F;              // bits [6:0]
+        expected_register_destination = (instruction >> 7) & 0x1F;  // bits [11:7]
+        expected_immediate_20bit = (instruction >> 12) & 0xFFFFF;    // bits [31:12]
+        expected_immediate_32bit = (instruction >> 12) & 0xFFFFF;    // bits [31:12]
+    }
+
+    uint8_t real_opcode = 0x00;
+    uint8_t real_register_destination = 0x00;
+    uint16_t real_immediate_20bit = 0x00;
+    uint32_t real_immediate_32bit = 0x00;
+    
+    uint32_t u_type_instr_op = expected_immediate_20bit << 12 | expected_register_destination << 7 | expected_opcode;
+
+    std::cout << "  Expected: " << std::bitset<32>(u_type_instr_op) << "\n";
+
+    cu->instruction = u_type_instr_op;
+    cu->eval();
+    tfp->dump(time++);
+
+    real_opcode = cu->opcode;
+    real_register_destination = cu->register_destination;
+    real_immediate_20bit = cu->immediate_20bit;
+    real_immediate_32bit = cu->immediate_32bit;
+
+    if (real_opcode != expected_opcode) {
+        std::cerr << "  FAIL \t opcode=" << std::bitset<7>(real_opcode) << ", expected=" << std::bitset<7>(expected_opcode) << "\n";
+        return 1;
+    }
+    std::cout << "  OK   \t opcode=" << std::bitset<7>(real_opcode) << " (expected " << std::bitset<7>(expected_opcode) << ")\n";
+
+    if (real_register_destination != expected_register_destination) {
+        std::cerr << "  FAIL \t register_destination=" << std::bitset<5>(real_register_destination) << ", expected=" << std::bitset<5>(expected_register_destination) << "\n";
+        return 1;
+    }
+    std::cout << "  OK   \t register_destination=" << std::bitset<5>(real_register_destination) << " (expected " << std::bitset<5>(expected_register_destination) << ")\n";
+
+    if (real_immediate_20bit != expected_immediate_20bit) { 
+        std::cerr << "  FAIL \t immediate_20bit=" << std::bitset<20>(real_immediate_20bit) << ", expected=" << std::bitset<20>(expected_immediate_20bit) << "\n";
+        return 1;
+    }
+    std::cout << "  OK   \t immediate_20bit=" << std::bitset<20>(real_immediate_20bit) << " (expected " << std::bitset<20>(expected_immediate_20bit) << ")\n";
+
+    if (real_immediate_32bit != expected_immediate_32bit) {
+        std::cerr << "  FAIL \t immediate_32bit=" << std::bitset<32>(real_immediate_32bit) << ", expected=" << std::bitset<32>(expected_immediate_32bit) << "\n";
+        return 1;
+    }
+    std::cout << "  OK   \t immediate_32bit=" << std::bitset<32>(real_immediate_32bit) << " (expected " << std::bitset<32>(expected_immediate_32bit) << ")\n";
+
+    std::cout << "\n";
+    return true;
+}
+
+
 int main(int argc, char** argv) {
     // Initialize Verilator
     Verilated::commandArgs(argc, argv);
@@ -325,14 +398,20 @@ int main(int argc, char** argv) {
     tfp->open("waveform_cu.vcd");
     
     uint64_t time = 0;
+    int test_result = 0;
     int test_count = 0;
+    int test_success = 0;
 
     
     std::cout << "Testing Control Unit Decoder\n";
     std::cout << "============================\n\n";
     
     // Test 1: R-Type (Register-Register) (OP)
-    test_r_type_instruction(cu, tfp, time);
+    test_result = test_r_type_instruction(cu, tfp, time);
+    if (test_result) {
+        test_success++;
+    }
+    test_count++;
 
     /*
     add x3, x1, x2 -> 0x002081B3
@@ -347,21 +426,23 @@ int main(int argc, char** argv) {
     slt x6, x7, x8 -> 0x0083A333
     sltu x6, x7, x8 -> 0x0083B333
     */
-    // Test: R-Type (Register-Register) add instruction
-    test_r_type_instruction(cu, tfp, time, 0x002081B3);
+    uint32_t test_r_instructions[] = {0x002081B3, 0x00F702B3, 0x40730233, 0x00A4F433, 0x00D665B3, 0x00314133, 0x002090B3, 0x00555533, 0x40555533, 0x0083A333, 0x0083B333};
+    for (int i = 0; i < sizeof(test_r_instructions) / sizeof(test_r_instructions[0]); i++) {
+        test_result = test_r_type_instruction(cu, tfp, time, test_r_instructions[i]);
+        if (test_result) {
+            test_success++;
+        }
+        test_count++;
+    }
 
-    // Test: R-Type (Register-Register) add instruction
-    test_r_type_instruction(cu, tfp, time, 0x00F702B3);
-
-    // Test: R-Type (Register-Register) add instruction
-    test_r_type_instruction(cu, tfp, time, 0x40730233);
-
-    // Test: R-Type (Register-Register) add instruction
-    test_r_type_instruction(cu, tfp, time, 0x00A4F433);
     
     
     // Test 2: I-Type (Immediate/Loads/JALR) (JALR)
-    test_i_type_instruction(cu, tfp, time);
+    test_result = test_i_type_instruction(cu, tfp, time);
+    if (test_result) {
+        test_success++;
+    }
+    test_count++;
 
     /*
     ADDI (opcode 0x13)
@@ -382,49 +463,22 @@ int main(int argc, char** argv) {
     12) jalr x0, 0(x1) -> 0x00008067
     13) jalr x10, 8(x2) -> 0x00810567
     */
-
-    // Test: I-Type (Immediate/Loads/JALR) addi instruction
-    test_i_type_instruction(cu, tfp, time, 0x00500093);
-
-    // Test: I-Type (Immediate/Loads/JALR) addi instruction
-    test_i_type_instruction(cu, tfp, time, 0x00A08113);
-
-    // Test: I-Type (Immediate/Loads/JALR) addi instruction
-    test_i_type_instruction(cu, tfp, time, 0xFFF18193);
-
-    // Test: I-Type (Immediate/Loads/JALR) addi instruction
-    test_i_type_instruction(cu, tfp, time, 0x7FF00793);
-
-    // Test: I-Type (Immediate/Loads/JALR) lw instruction
-    test_i_type_instruction(cu, tfp, time, 0x0000A103);
-
-    // Test: I-Type (Immediate/Loads/JALR) lw instruction
-    test_i_type_instruction(cu, tfp, time, 0x0040A183);
-
-    // Test: I-Type (Immediate/Loads/JALR) lw instruction
-    test_i_type_instruction(cu, tfp, time, 0xFFC12203);
-
-    // Test: I-Type (Immediate/Loads/JALR) lbu instruction
-    test_i_type_instruction(cu, tfp, time, 0x0000C283);
-
-    // Test: I-Type (Immediate/Loads/JALR) lbu instruction
-    test_i_type_instruction(cu, tfp, time, 0x0010C303);
-
-    // Test: I-Type (Immediate/Loads/JALR) lbu instruction
-    test_i_type_instruction(cu, tfp, time, 0x0030C383);
-
-    // Test: I-Type (Immediate/Loads/JALR) jalr instruction
-    test_i_type_instruction(cu, tfp, time, 0x000280E7);
-
-    // Test: I-Type (Immediate/Loads/JALR) jalr instruction
-    test_i_type_instruction(cu, tfp, time, 0x00008067);
-
-    // Test: I-Type (Immediate/Loads/JALR) jalr instruction
-    test_i_type_instruction(cu, tfp, time, 0x00810567);
+    uint32_t test_i_instructions[] = {0x00500093, 0x00A08113, 0xFFF18193, 0x7FF00793, 0x0000A103, 0x0040A183, 0xFFC12203, 0x0000C283, 0x0010C303, 0x0030C383, 0x000280E7, 0x00008067, 0x00810567};
+    for (int i = 0; i < sizeof(test_i_instructions) / sizeof(test_i_instructions[0]); i++) {
+        test_result = test_i_type_instruction(cu, tfp, time, test_i_instructions[i]);
+        if (test_result) {
+            test_success++;
+        }
+        test_count++;
+    }
 
 
     // Test 3: S-Type (Store)
-    test_s_type_instruction(cu, tfp, time);
+    test_result = test_s_type_instruction(cu, tfp, time);
+    if (test_result) {
+        test_success++;
+    }
+    test_count++;
 
     /*
     sw x2, 0(x1)    -> 0x0020A023
@@ -439,26 +493,39 @@ int main(int argc, char** argv) {
     sb x5, 3(x1)    -> 0x005081A3
     sb x6, -1(x2)   -> 0xFE610FA3
     */
-
-    // Test: S-Type (Store) sw instruction
-    test_s_type_instruction(cu, tfp, time, 0x0020A023);
-
-    // Test: S-Type (Store) sw instruction
-    test_s_type_instruction(cu, tfp, time, 0x0030A223);
-
-    // Test: S-Type (Store) sw instruction
-    test_s_type_instruction(cu, tfp, time, 0x0040A423);
-    
-    // Test: S-Type (Store) sw instruction
-    test_s_type_instruction(cu, tfp, time, 0x0050A623);
-
-    // Test: S-Type (Store) sw instruction
-    test_s_type_instruction(cu, tfp, time, 0xFE612E23);
-
-    // Test: S-Type (Store) sb instruction
-    test_s_type_instruction(cu, tfp, time, 0x00208023);
+    uint32_t test_s_instructions[] = {0x0020A023, 0x0030A223, 0x0040A423, 0x0050A623, 0xFE612E23, 0x00208023, 0x003080A3, 0x00408123, 0x005081A3, 0xFE610FA3};
+    for (int i = 0; i < sizeof(test_s_instructions) / sizeof(test_s_instructions[0]); i++) {
+        test_result = test_s_type_instruction(cu, tfp, time, test_s_instructions[i]);
+        if (test_result) {
+            test_success++;
+        }
+        test_count++;
+    }
 
 
+    // Test 4: U-Type
+    test_result = test_u_type_instruction(cu, tfp, time);
+    if (test_result) {
+        test_success++;
+    }
+    test_count++;
+
+    /*
+    lui x1, 1024 -> 0x00004037
+    lui x2, 2048 -> 0x00008037
+    lui x3, 4096 -> 0x00010037
+    lui x4, 8192 -> 0x00020037
+    lui x5, 16384 -> 0x00040037
+    */
+
+    uint32_t test_u_instructions[] = {0x00004037, 0x00008037, 0x00010037, 0x00020037, 0x00040037};
+    for (int i = 0; i < sizeof(test_u_instructions) / sizeof(test_u_instructions[0]); i++) {
+        test_result = test_u_type_instruction(cu, tfp, time, test_u_instructions[i]);
+        if (test_result) {
+            test_success++;
+        }
+        test_count++;
+    }
     std::cout << "\n";
     
     // Cleanup
@@ -466,7 +533,13 @@ int main(int argc, char** argv) {
     delete tfp;
     delete cu;
     
-    std::cout << "✅ All " << test_count << " tests passed!\n";
+
+
+    if (test_success == test_count) {
+        std::cout << "✅ All " << test_success << " tests passed!\n";
+    } else {
+        std::cout << "❌ " << test_count - test_success << " tests failed!\n";
+    }
     std::cout << "VCD file: waveform_cu.vcd\n";
     return 0;
 }
