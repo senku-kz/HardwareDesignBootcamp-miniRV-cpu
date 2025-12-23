@@ -9,6 +9,8 @@
 #include "Vinstruction_memory.h"
 
 int MEMORY_SIZE = 16;
+uint32_t expected_value = 0x00;
+uint32_t real_value = 0x00;
 
 void read_hex_file(std::string filename, uint32_t* memory) {
     std::ifstream file(filename);

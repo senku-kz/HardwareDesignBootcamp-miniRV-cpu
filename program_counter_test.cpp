@@ -4,8 +4,8 @@
 #include "Vprogram_counter.h"
 
 
-uint32_t expected_pc_out = 0x00;
-uint32_t real_pc_out = 0x00;
+uint32_t expected_value = 0x00;
+uint32_t real_value = 0x00;
 
 void initialize_signals(Vprogram_counter* pc) {
     pc->opcode = 0;
@@ -33,16 +33,16 @@ void reset_pc(Vprogram_counter* pc, VerilatedVcdC* tfp, uint64_t& time) {
 
 bool test_reset(Vprogram_counter* pc, VerilatedVcdC* tfp, uint64_t& time) {
     initialize_signals(pc);
-    expected_pc_out = 0x00;
+    expected_value = 0x00;
 
     reset_pc(pc, tfp, time);
 
-    real_pc_out = pc->pc_out;
-    if (real_pc_out != expected_pc_out) {
-        std::cerr << "FAIL: Reset did not set pc_out to 0 (expected " << expected_pc_out << ", got " << real_pc_out << ")\n";
+    real_value = pc->pc_out;
+    if (real_value != expected_value) {
+        std::cerr << "FAIL: Reset did not set pc_out to 0 (expected " << expected_value << ", got " << real_value << ")\n";
         return false;
     }
-    std::cout << "\t ok \t pc_out = " << expected_pc_out << "\n";
+    std::cout << "\t ok \t pc_out = " << expected_value << "\n";
     return true;
 }
 
@@ -50,16 +50,16 @@ bool test_reset(Vprogram_counter* pc, VerilatedVcdC* tfp, uint64_t& time) {
 bool test_increment_once(Vprogram_counter* pc, VerilatedVcdC* tfp, uint64_t& time) {
     initialize_signals(pc);
     reset_pc(pc, tfp, time);
-    expected_pc_out = 0x04;
+    expected_value = 0x04;
 
     clock_cycle(pc, tfp, time);
 
-    real_pc_out = pc->pc_out;
-    if (real_pc_out != expected_pc_out) {
-        std::cerr << "FAIL: Increment did not increment pc_out (expected " << expected_pc_out << ", got " << real_pc_out << ")\n";
+    real_value = pc->pc_out;
+    if (real_value != expected_value) {
+        std::cerr << "FAIL: Increment did not increment pc_out (expected " << expected_value << ", got " << real_value << ")\n";
         return false;
     }
-    std::cout << "\t ok \t pc_out = " << expected_pc_out << "\n";
+    std::cout << "\t ok \t pc_out = " << expected_value << "\n";
     return true;
 }
 
@@ -67,18 +67,18 @@ bool test_increment_once(Vprogram_counter* pc, VerilatedVcdC* tfp, uint64_t& tim
 bool test_increment_multiple(Vprogram_counter* pc, VerilatedVcdC* tfp, uint64_t& time) {
     initialize_signals(pc);
     reset_pc(pc, tfp, time);
-    expected_pc_out = 0x00;
+    expected_value = 0x00;
 
     for (int i = 0; i < 5; i++) {
         clock_cycle(pc, tfp, time);
-        real_pc_out = pc->pc_out;
-        expected_pc_out = expected_pc_out + 4;
-        if (real_pc_out != expected_pc_out) {
-            std::cerr << "FAIL: Multiple increments failed (expected " << expected_pc_out << ", got " << real_pc_out << ")\n";
+        real_value = pc->pc_out;
+        expected_value = expected_value + 4;
+        if (real_value != expected_value) {
+            std::cerr << "FAIL: Multiple increments failed (expected " << expected_value << ", got " << real_value << ")\n";
             return false;
         }
     }
-    std::cout << "\t ok \t pc_out = " << expected_pc_out << "\n";
+    std::cout << "\t ok \t pc_out = " << expected_value << "\n";
     return true;
 }
 
@@ -86,19 +86,19 @@ bool test_increment_multiple(Vprogram_counter* pc, VerilatedVcdC* tfp, uint64_t&
 bool test_jalr(Vprogram_counter* pc, VerilatedVcdC* tfp, uint64_t& time) {
     initialize_signals(pc);
     reset_pc(pc, tfp, time);
-    expected_pc_out = 0x0a;
+    expected_value = 0x0a;
 
     pc->opcode = 0b1100111;  // JALR opcode (0x67)
-    pc->set_value = expected_pc_out;
+    pc->set_value = expected_value;
 
     clock_cycle(pc, tfp, time);
 
-    real_pc_out = pc->pc_out;
-    if (real_pc_out != expected_pc_out) {
-        std::cerr << "FAIL: JALR did not set pc_out to 0x04 (expected " << expected_pc_out << ", got " << real_pc_out << ")\n";
+    real_value = pc->pc_out;
+    if (real_value != expected_value) {
+        std::cerr << "FAIL: JALR did not set pc_out to 0x04 (expected " << expected_value << ", got " << real_value << ")\n";
         return false;
     }
-    std::cout << "\t ok \t pc_out = " << expected_pc_out << "\n";
+    std::cout << "\t ok \t pc_out = " << expected_value << "\n";
     return true;
 }
 
@@ -106,23 +106,23 @@ bool test_jalr(Vprogram_counter* pc, VerilatedVcdC* tfp, uint64_t& time) {
 bool test_increment_after_jalr(Vprogram_counter* pc, VerilatedVcdC* tfp, uint64_t& time) {
     initialize_signals(pc);
     reset_pc(pc, tfp, time);
-    expected_pc_out = 0x0e;
+    expected_value = 0x0e;
 
     pc->opcode = 0b1100111;  // JALR opcode (0x67)
-    pc->set_value = expected_pc_out;
+    pc->set_value = expected_value;
 
     clock_cycle(pc, tfp, time); 
 
-    expected_pc_out = expected_pc_out + 4;
+    expected_value = expected_value + 4;
     pc->opcode = 0x00;  // Normal mode
     clock_cycle(pc, tfp, time);
 
-    real_pc_out = pc->pc_out;
-    if (real_pc_out != expected_pc_out) {
-        std::cerr << "FAIL: Increment after branch failed (expected " << expected_pc_out << ", got " << real_pc_out << ")\n";
+    real_value = pc->pc_out;
+    if (real_value != expected_value) {
+        std::cerr << "FAIL: Increment after branch failed (expected " << expected_value << ", got " << real_value << ")\n";
         return false;
     }
-    std::cout << "\t ok \t pc_out = " << expected_pc_out << "\n";
+    std::cout << "\t ok \t pc_out = " << expected_value << "\n";
     return true;   
 }
 
