@@ -25,7 +25,9 @@ module control_unit(
     logic [31:0] instr_imm_32bit;
     logic [2:0] instr_funct3;
     logic [6:0] instr_funct7;
-    
+    logic [31:0] instr_imm_i;
+    logic [31:0] instr_imm_s;
+    logic [31:0] instr_imm_u;
 
 
     assign instr_opcode = instruction[6:0];
@@ -41,7 +43,17 @@ module control_unit(
     assign instr_imm_12bit = instruction[31:20];
     assign instr_imm_20bit = instruction[31:12];
 
-    
+    // I-type imm[11:0] sign-extended
+    assign instr_imm_i = {{20{instruction[31]}}, instruction[31:20]};
+
+    // S-type imm[11:5|4:0] sign-extended
+    assign instr_imm_s = {{20{instruction[31]}}, instruction[31:25], instruction[11:7]};
+
+    // U-type imm[31:12] << 12
+    assign instr_imm_u = {instruction[31],instruction[30:12], 12'b0};
+
+
+
     // Decode based on opcode
     always_comb begin
         // Default values for all outputs (prevents latches)
@@ -83,7 +95,7 @@ module control_unit(
                 register_source_1 = instr_rs1;
                 function_3 = instr_funct3;
                 immediate_12bit = instr_imm_12bit;
-                immediate_32bit = {20'b0, instr_imm_12bit};
+                immediate_32bit = instr_imm_i;
             end
             5'b00000: begin
                 // I-Type (Immediate/Loads/JALR) (LOAD) (LW-type / LB-type)
@@ -91,7 +103,7 @@ module control_unit(
                 register_source_1 = instr_rs1;
                 function_3 = instr_funct3;
                 immediate_12bit = instr_imm_12bit;
-                immediate_32bit = {20'b0, instr_imm_12bit};
+                immediate_32bit = instr_imm_i;
             end
             5'b11001: begin
                 // I-Type (Immediate/Loads/JALR) (JALR)
@@ -99,7 +111,7 @@ module control_unit(
                 register_source_1 = instr_rs1;
                 function_3 = instr_funct3;
                 immediate_12bit = instr_imm_12bit;
-                immediate_32bit = {20'b0, instr_imm_12bit};
+                immediate_32bit = instr_imm_i;
             end
             5'b11100: begin
                 // I-Type (Immediate/Loads/JALR) (SYSTEM) 
@@ -107,7 +119,7 @@ module control_unit(
                 register_source_1 = instr_rs1;
                 function_3 = instr_funct3;
                 immediate_12bit = instr_imm_12bit;
-                immediate_32bit = {20'b0, instr_imm_12bit};
+                immediate_32bit = instr_imm_i;
             end
             5'b00110: begin
                 // I-Type (Immediate/Loads/JALR) (OP-IMM-32)
@@ -115,7 +127,7 @@ module control_unit(
                 register_source_1 = instr_rs1;
                 function_3 = instr_funct3;
                 immediate_12bit = instr_imm_12bit;
-                immediate_32bit = {20'b0, instr_imm_12bit};
+                immediate_32bit = instr_imm_i;
             end
 
             // S-Type (Store)
@@ -126,7 +138,7 @@ module control_unit(
                 register_source_1 = instr_rs1;
                 register_source_2 = instr_rs2;
                 immediate_7bit = instr_imm_7bit;
-                immediate_32bit = {25'b0, instr_imm_7bit};
+                immediate_32bit = instr_imm_s;
             end
 
             // B-Type (Branch)
@@ -135,7 +147,7 @@ module control_unit(
                 register_source_1 = instr_rs1;
                 register_source_2 = instr_rs2;
                 immediate_7bit = instr_imm_7bit;
-                immediate_32bit = {25'b0, instr_imm_7bit};
+                immediate_32bit = instr_imm_s;
             end
 
             // U-Type (LUI/AUIPC)
@@ -143,13 +155,13 @@ module control_unit(
                 // U-Type (LUI) (LUI)
                 register_destination = instr_rd;
                 immediate_20bit = instr_imm_20bit;
-                immediate_32bit = {12'b0, instr_imm_20bit};
+                immediate_32bit = instr_imm_u;
             end
             5'b00101: begin
                 // U-Type (LUI) (AUIPC)
                 register_destination = instr_rd;
                 immediate_20bit = instr_imm_20bit;
-                immediate_32bit = {12'b0, instr_imm_20bit};
+                immediate_32bit = instr_imm_u;
             end
 
             // J-Type (JAL)
@@ -157,35 +169,9 @@ module control_unit(
                 // J-Type (JAL) (JAL)
                 register_destination = instr_rd;
                 immediate_20bit = instr_imm_20bit;
-                immediate_32bit = {12'b0, instr_imm_20bit};
+                immediate_32bit = instr_imm_u;
             end
 
-            // // V-Type (V)
-            // 5'b10101: begin
-            //     // V-Type (V) (OP-V)
-            //     register_destination = instr_rd;
-            //     register_source_1 = instr_rs1;
-            //     register_source_2 = instr_rs2;
-            //     immediate_12bit = instr_imm;
-            // end
-            // 5'b00001: begin
-            //     // V-Type (V) (LOAD-FP)
-            //     register_destination = instr_rd;
-            //     register_source_1 = instr_rs1;
-            //     immediate_12bit = instr_imm;
-            // end
-            // 5'b01001: begin
-            //     // V-Type (V) (STORE-FP)
-            //     register_source_1 = instr_rs1;
-            //     register_source_2 = instr_rs2;
-            // end
-            // 5'b11101: begin
-            //     // V-Type (V) (OP-VE)
-            //     register_destination = instr_rd;
-            //     register_source_1 = instr_rs1;
-            //     register_source_2 = instr_rs2;
-            //     immediate_12bit = instr_imm;
-            // end
             default: begin
                 // Default case
                 opcode = 7'b0000000;
