@@ -11,6 +11,9 @@ obj_dir/
 *.d
 *.mk
 
+# C++ build directory
+build/
+
 # iverilog output
 *.vvp
 *.vcd

@@ -6,14 +6,19 @@ module register_file (
     input  logic        clk,
     input  logic        reset,
     input  logic        we,           // write enable
-    input  logic [3:0]  raddr1,       // read address 1 (rs1)
-    input  logic [3:0]  raddr2,       // read address 2 (rs2)
-    input  logic [3:0]  waddr,        // write address (rd)
+    input  logic [4:0]  raddr1,       // read address 1 (rs1)
+    input  logic [4:0]  raddr2,       // read address 2 (rs2)
+    input  logic [4:0]  waddr,        // write address (rd)
     input  logic [31:0] wdata,        // write data
     
     output logic [31:0] rdata1,       // read data 1
     output logic [31:0] rdata2        // read data 2
 );
+
+    logic [3:0] raddr1_4bit, raddr2_4bit, waddr_4bit;
+    assign raddr1_4bit = raddr1[3:0];
+    assign raddr2_4bit = raddr2[3:0];
+    assign waddr_4bit = waddr[3:0];
 
     // 16 x 32-bit registers (x0-x15)
     logic [31:0] regs [15:0];
@@ -24,15 +29,15 @@ module register_file (
             for (int i = 0; i < 16; i++) begin
                 regs[i] <= 32'h0;
             end
-        end else if (we && waddr != 4'h0) begin
-            regs[waddr] <= wdata;
+        end else if (we && waddr_4bit != 4'h0) begin
+            regs[waddr_4bit] <= wdata;
         end
     end
 
     // Read port 1: x0 always returns 0
-    assign rdata1 = (raddr1 == 4'h0) ? 32'h0 : regs[raddr1];
+    assign rdata1 = (raddr1_4bit == 4'h0) ? 32'h0 : regs[raddr1_4bit];
 
     // Read port 2: x0 always returns 0
-    assign rdata2 = (raddr2 == 4'h0) ? 32'h0 : regs[raddr2];
+    assign rdata2 = (raddr2_4bit == 4'h0) ? 32'h0 : regs[raddr2_4bit];
 
 endmodule

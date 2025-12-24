@@ -7,11 +7,13 @@ module instruction_fetch(
     parameter MEMORY_SIZE = 32;
     logic [31:0] memory [0:MEMORY_SIZE-1];
 
+    parameter INSTRUCTION_MEMORY_FILE = "logisim-bin/test-pc4.hex";
+
     // Initialize the instruction memory with example program:
     // Program: Load immediates, add them, and loop
     initial begin
         // Load data from "test.hex" into the entire array
-        $readmemh("logisim-bin/test-pc4.hex", memory);
+        $readmemh(INSTRUCTION_MEMORY_FILE, memory);
     end
 
     // logic [31:0] masked_address = 32'b1111_1111_1111_1111_1111_1111_1111_1100;
