@@ -9,7 +9,7 @@
 
 // Golden Model CPU for miniRV (RISC-V RV32E subset)
 // This is a functional C++ model that executes instructions from hex files
-int CYCLE_LIMIT = 50;
+int CYCLE_LIMIT = 100;
 
 class GoldenModelCPU {
 private:
@@ -144,15 +144,18 @@ public:
         if (imm_s & 0x800) imm_s |= 0xFFFFF800;  // Sign extend
         uint32_t imm_u = instr & 0xFFFFF000;  // Upper 20 bits, lower 12 bits are 0
         
-        // Check for illegal registers (x16-x31)
-        bool illegal_reg = (rd >= REGISTER_LIMIT) || (rs1 >= REGISTER_LIMIT) || (rs2 >= REGISTER_LIMIT);
-        
         // Execute instruction based on opcode
         switch (opcode) {
             case 0x33: {  // R-Type: ADD
-                if (funct3 == 0x0 && funct7 == 0x0 && !illegal_reg) {
-                    if (rd < REGISTER_LIMIT && rd != 0) {
+                std::cout << "ADD: rd = x" << (int)rd 
+                << ", rs1 = x" << (int)rs1 
+                << ", rs2 = x" << (int)rs2 
+                << std::endl;
+                if (funct3 == 0x0 && funct7 == 0x0) {
+                    if (rd < REGISTER_LIMIT && rd != 0 && rs1 < REGISTER_LIMIT && rs2 < REGISTER_LIMIT) {
                         regs[rd] = regs[rs1] + regs[rs2];
+                    } else {
+                        std::cerr << "Error: Illegal register: rd = " << (int)rd << ", rs1 = " << (int)rs1 << ", rs2 = " << (int)rs2 << std::endl;
                     }
                 }
                 break;
@@ -184,8 +187,13 @@ public:
             }
             
             case 0x03: {  // I-Type: Load instructions
-                if (!illegal_reg && rd < REGISTER_LIMIT) {
+                std::cout << "LW: rd = x" << (int)rd 
+                << ", rs1 = x" << (int)rs1 
+                << ", imm_i = " << imm_i << " (0x" << std::hex << imm_i << std::dec << ")" << std::endl;
+
+                if (rd < REGISTER_LIMIT && rd != 0 && rs1 < REGISTER_LIMIT) {
                     uint32_t addr = regs[rs1] + imm_i;
+                    std::cout << "LOAD: addr = 0x" << std::hex << addr << std::dec << std::endl;
                     uint32_t word_addr = addr >> 2;
                     uint8_t byte_offset = addr & 0x3;
                     
