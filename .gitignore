@@ -53,3 +53,7 @@ build/
 __pycache__/
 *.pyc
 *.pyo
+
+golden_model_cpu
+golden_model_cpu.exe
+golden_model_cpu.dSYM/
