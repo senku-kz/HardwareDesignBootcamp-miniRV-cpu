@@ -10,7 +10,8 @@ module control_unit(
     output logic [6:0] immediate_7bit,
     output logic [11:0] immediate_12bit,
     output logic [19:0] immediate_20bit,
-    output logic [31:0] immediate_32bit
+    output logic [31:0] immediate_32bit,
+    output logic [1:0] wb_sel
 );
 
     // Extract all fields first (constant slices outside always_comb)
@@ -78,6 +79,7 @@ module control_unit(
                 register_source_2 = instr_rs2;
                 function_3 = instr_funct3;
                 function_7 = instr_funct7;
+                wb_sel = 2'b00;
             end
             5'b01110: begin
                 // R-Type (Register-Register) (OP-32)
@@ -86,6 +88,7 @@ module control_unit(
                 register_source_2 = instr_rs2;
                 function_3 = instr_funct3;
                 function_7 = instr_funct7;
+                wb_sel = 2'b00;
             end
 
             // I-Type (Immediate/Loads/JALR)
@@ -96,6 +99,7 @@ module control_unit(
                 function_3 = instr_funct3;
                 immediate_12bit = instr_imm_12bit;
                 immediate_32bit = instr_imm_i;
+                wb_sel = 2'b00;
             end
             5'b00000: begin
                 // I-Type (Immediate/Loads/JALR) (LOAD) (LW-type / LB-type)
@@ -104,6 +108,7 @@ module control_unit(
                 function_3 = instr_funct3;
                 immediate_12bit = instr_imm_12bit;
                 immediate_32bit = instr_imm_i;
+                wb_sel = 2'b01;
             end
             5'b11001: begin
                 // I-Type (Immediate/Loads/JALR) (JALR)
@@ -112,6 +117,7 @@ module control_unit(
                 function_3 = instr_funct3;
                 immediate_12bit = instr_imm_12bit;
                 immediate_32bit = instr_imm_i;
+                wb_sel = 2'b10;
             end
             5'b11100: begin
                 // I-Type (Immediate/Loads/JALR) (SYSTEM) 
@@ -120,6 +126,7 @@ module control_unit(
                 function_3 = instr_funct3;
                 immediate_12bit = instr_imm_12bit;
                 immediate_32bit = instr_imm_i;
+                wb_sel = 2'b00;
             end
             5'b00110: begin
                 // I-Type (Immediate/Loads/JALR) (OP-IMM-32)
@@ -128,6 +135,7 @@ module control_unit(
                 function_3 = instr_funct3;
                 immediate_12bit = instr_imm_12bit;
                 immediate_32bit = instr_imm_i;
+                wb_sel = 2'b00;
             end
 
             // S-Type (Store)
@@ -139,6 +147,7 @@ module control_unit(
                 register_source_2 = instr_rs2;
                 immediate_7bit = instr_imm_7bit;
                 immediate_32bit = instr_imm_s;
+                wb_sel = 2'b00;
             end
 
             // B-Type (Branch)
@@ -148,6 +157,7 @@ module control_unit(
                 register_source_2 = instr_rs2;
                 immediate_7bit = instr_imm_7bit;
                 immediate_32bit = instr_imm_s;
+                wb_sel = 2'b00;
             end
 
             // U-Type (LUI/AUIPC)
@@ -156,12 +166,14 @@ module control_unit(
                 register_destination = instr_rd;
                 immediate_20bit = instr_imm_20bit;
                 immediate_32bit = instr_imm_u;
+                wb_sel = 2'b00;
             end
             5'b00101: begin
                 // U-Type (LUI) (AUIPC)
                 register_destination = instr_rd;
                 immediate_20bit = instr_imm_20bit;
                 immediate_32bit = instr_imm_u;
+                wb_sel = 2'b00;
             end
 
             // J-Type (JAL)
@@ -170,6 +182,7 @@ module control_unit(
                 register_destination = instr_rd;
                 immediate_20bit = instr_imm_20bit;
                 immediate_32bit = instr_imm_u;
+                wb_sel = 2'b10;
             end
 
             default: begin
@@ -184,6 +197,7 @@ module control_unit(
                 immediate_32bit = 32'b0000_0000_0000_0000_0000_0000_0000_0000;
                 function_3 = 3'b000;
                 function_7 = 7'b0000000;
+                wb_sel = 2'b00;
             end
         endcase
     end
