@@ -1,6 +1,8 @@
 #!/bin/bash
 # Compile and run Golden Model CPU
 
+clear
+
 # Default hex file
 HEX_FILE="logisim-bin/sum.hex"
 

@@ -3,7 +3,10 @@
 
 module miniRV (
     input  logic        clk,
-    input  logic        reset
+    input  logic        reset,
+
+    output logic [31:0] pc_,
+    output logic [31:0] registers [0:15]
 );
 
     // ========== Memory Interfaces ==========

@@ -9,14 +9,17 @@
 
 // Golden Model CPU for miniRV (RISC-V RV32E subset)
 // This is a functional C++ model that executes instructions from hex files
+int CYCLE_LIMIT = 50;
 
 class GoldenModelCPU {
+private:
+    static constexpr size_t REGISTER_LIMIT = 16;
 public:
     // Public attributes as requested
     bool clock;
     bool reset;
     uint32_t pc;              // Program Counter
-    uint32_t regs[16];        // 16 registers (x0-x15)
+    uint32_t regs[REGISTER_LIMIT];        // 16 registers (x0-x15)
     
     // Instruction memory and data memory
     static constexpr size_t IMEM_SIZE = 1024 * 1024;  // 1M words
@@ -68,7 +71,7 @@ public:
             
             // Parse base address
             uint32_t base_addr = std::stoul(addr_str, nullptr, 16);
-            base_addr = base_addr >> 2;  // Convert byte address to word index
+            // base_addr = base_addr >> 2;  // Convert byte address to word index
             
             // Parse instructions
             std::istringstream iss(instr_str);
@@ -100,7 +103,7 @@ public:
     void resetCPU() {
         reset = true;
         pc = 0;
-        for (int i = 0; i < 16; i++) {
+        for (int i = 0; i < REGISTER_LIMIT; i++) {
             regs[i] = 0;
         }
         reset = false;
@@ -116,6 +119,10 @@ public:
         }
         
         uint32_t instr = imem[word_index];
+
+        std::cout << "PC: 0x" << std::hex << pc << std::dec << std::endl;
+        std::cout << "Instruction: 0x" << std::hex << instr << std::dec << std::endl;
+        std::cout << "Instruction: 0b" << std::bitset<32>(instr) << std::endl;
         
         // Decode instruction
         uint8_t opcode = instr & 0x7F;
@@ -138,13 +145,13 @@ public:
         uint32_t imm_u = instr & 0xFFFFF000;  // Upper 20 bits, lower 12 bits are 0
         
         // Check for illegal registers (x16-x31)
-        bool illegal_reg = (rd >= 16) || (rs1 >= 16) || (rs2 >= 16);
+        bool illegal_reg = (rd >= REGISTER_LIMIT) || (rs1 >= REGISTER_LIMIT) || (rs2 >= REGISTER_LIMIT);
         
         // Execute instruction based on opcode
         switch (opcode) {
             case 0x33: {  // R-Type: ADD
                 if (funct3 == 0x0 && funct7 == 0x0 && !illegal_reg) {
-                    if (rd < 16 && rd != 0) {
+                    if (rd < REGISTER_LIMIT && rd != 0) {
                         regs[rd] = regs[rs1] + regs[rs2];
                     }
                 }
@@ -152,23 +159,32 @@ public:
             }
             
             case 0x13: {  // I-Type: ADDI
-                if (funct3 == 0x0 && !illegal_reg) {
-                    if (rd < 16 && rd != 0) {
+                std::cout << "ADDI: rd = x" << (int)rd 
+                << ", rs1 = x" << (int)rs1 
+                << ", imm_i = " << imm_i << " (0x" << std::hex << imm_i << std::dec << ")" << std::endl;
+                if (funct3 == 0x0) {
+                    if (rd < REGISTER_LIMIT && rd != 0 && rs1 < REGISTER_LIMIT) {
                         regs[rd] = regs[rs1] + imm_i;
+                    } else {
+                        std::cerr << "Error: Illegal register: rd = " << (int)rd << ", rs1 = " << (int)rs1 << std::endl;
                     }
                 }
                 break;
             }
             
             case 0x37: {  // U-Type: LUI
-                if (!illegal_reg && rd < 16 && rd != 0) {
+                std::cout << "LUI: rd = x" << (int)rd 
+                << ", imm_u = 0x" << std::hex << imm_u << std::dec << std::endl;  
+                if (rd < REGISTER_LIMIT && rd != 0) {
                     regs[rd] = imm_u;
+                } else {
+                    std::cerr << "Error: Illegal register: rd = " << (int)rd << std::endl;
                 }
                 break;
             }
             
             case 0x03: {  // I-Type: Load instructions
-                if (!illegal_reg && rd < 16) {
+                if (!illegal_reg && rd < REGISTER_LIMIT) {
                     uint32_t addr = regs[rs1] + imm_i;
                     uint32_t word_addr = addr >> 2;
                     uint8_t byte_offset = addr & 0x3;
@@ -196,7 +212,11 @@ public:
             }
             
             case 0x23: {  // S-Type: Store instructions
-                if (!illegal_reg) {
+                std::cout << "STORE: rs1 = x" << (int)rs1 
+                << ", rs2 = x" << (int)rs2 
+                << ", imm_s = 0x" << std::hex << imm_s << std::dec << std::endl;
+                
+                if (rs1 < REGISTER_LIMIT && rs2 < REGISTER_LIMIT) {
                     uint32_t addr = regs[rs1] + imm_s;
                     uint32_t word_addr = addr >> 2;
                     uint8_t byte_offset = addr & 0x3;
@@ -210,19 +230,31 @@ public:
                         } else if (funct3 == 0x0) {  // SB - Store byte
                             dmem[word_addr * 4 + byte_offset] = regs[rs2] & 0xFF;
                         }
+                        std::cout << "STORE: addr = 0x" << std::hex << addr << std::dec << std::endl;
+                        std::cout << "STORE: value = 0x" << std::hex << regs[rs2] << std::dec << std::endl;
                     }
+                } else {
+                    std::cerr << "Error: Illegal register: rs1 = " << (int)rs1 << ", rs2 = " << (int)rs2 << std::endl;
                 }
                 break;
             }
             
             case 0x67: {  // I-Type: JALR
-                if (funct3 == 0x0 && !illegal_reg) {
-                    if (rd < 16 && rd != 0) {
+                std::cout << "JALR: rd = x" << (int)rd 
+                << ", rs1 = x" << (int)rs1 
+                << ", imm_i = " << imm_i << std::endl;
+                
+                if (funct3 == 0x0) {
+                    if (rd < REGISTER_LIMIT && rd != 0 && rs1 < REGISTER_LIMIT) {
+                        next_pc = (regs[rs1] + imm_i) & 0xFFFFFFFE;  // Clear LSB
                         regs[rd] = pc_plus4;
+                        // next_pc = target;
+                    } else {
+                        std::cerr << "Error: Illegal register: rd = " << (int)rd << ", rs1 = " << (int)rs1 << std::endl;
                     }
-                    uint32_t target = (regs[rs1] + imm_i) & 0xFFFFFFFE;  // Clear LSB
-                    next_pc = target;
                 }
+                std::cout << "JALR: target = 0x" << std::hex << next_pc << std::dec 
+                << ", saved pc + 4 = 0x" << std::hex << pc_plus4 << std::dec << std::endl;
                 break;
             }
             
@@ -262,13 +294,13 @@ public:
         std::cout << "CPU State:\n";
         std::cout << "  PC: 0x" << std::hex << std::setfill('0') << std::setw(8) << pc << std::dec << "\n";
         std::cout << "  Registers:\n";
-        for (int i = 0; i < 16; i++) {
+        for (int i = 0; i < REGISTER_LIMIT; i++) {
             std::cout << "    x" << i << ": 0x" << std::hex << std::setfill('0') << std::setw(8) 
                       << regs[i] << std::dec;
             if (i % 4 == 3) std::cout << "\n";
             else std::cout << "  ";
         }
-        if (16 % 4 != 0) std::cout << "\n";
+        if (REGISTER_LIMIT % 4 != 0) std::cout << "\n";
     }
     
     // Get instruction at address
@@ -309,6 +341,9 @@ int main(int argc, char** argv) {
     if (!cpu.loadHexFile(hex_file)) {
         return 1;
     }
+    for (int i = 0; i < 10; i++) {
+        std::cout << "imem[" << i << "] = 0x" << std::hex << cpu.imem[i] << std::dec << std::endl;
+    }
     
     // Reset CPU
     cpu.resetCPU();
@@ -320,11 +355,15 @@ int main(int argc, char** argv) {
     // Run for a few cycles (or until program ends)
     // std::cout << "\nExecuting instructions...\n";
     // cpu.runCycles(100);  // Execute 100 instructions
-    for (int i = 0; i < 100; i++) {
-        std::cout << "Cycle " << i << "\n";
+    std::cout << "--------------------------------\n";
+    std::cout << "Executing instructions...\n";
+    for (int i = 0; i < CYCLE_LIMIT; i++) {
+        std::cout << "Cycle " << i+1 << "\n";
         cpu.clockCycle();
         cpu.printState();
+        std::cout << "\n";
     }
+    std::cout << "--------------------------------\n";
     
     // Print final state
     std::cout << "\nFinal state:\n";
