@@ -7,7 +7,6 @@
 #include "Vwriteback_mux.h"
 
 
-// Генератор случайных чисел для 32-битных значений
 uint32_t generate_random_32bit() {
     static std::random_device rd;
     static std::mt19937 gen(rd());
@@ -260,4 +259,3 @@ int main(int argc, char** argv) {
     std::cout << "VCD file: waveform_writeback_mux.vcd\n";
     return (test_success == test_count) ? 0 : 1;
 }
-
