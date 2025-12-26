@@ -30,4 +30,3 @@ fi
 # Run with hex file
 echo "Running golden_model_cpu with $HEX_FILE..."
 ./"$BUILD_DIR/golden_model_cpu" "$HEX_FILE"
-

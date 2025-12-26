@@ -3,10 +3,13 @@
 #include <fstream>
 #include <string>
 #include <bitset>
+#include <cstring>
 #include <verilated.h>
 #include <verilated_vcd_c.h>
 #include "VminiRV.h"
+#include "golden_model_cpu.h"
 
+size_t REGISTER_LIMIT = 16;
 const std::string INSTRUCTION_MEMORY_FILE = "logisim-bin/test-pc4.hex";
 
 // Helper function to print instruction name
@@ -51,107 +54,87 @@ void run_cycles(VminiRV* cpu, VerilatedVcdC* tfp, uint64_t& time, int cycles) {
     }
 }
 
-bool compare_cpus(Vmain* designed_cpu, sCPU* golden_cpu, int cycle) {
-    bool match = true;
-    
-    // Compare PC (4-bit value stored in uint8_t)
-    uint8_t designed_pc = designed_cpu->pc_debug;
-    uint8_t golden_pc = golden_cpu->getPc();
-    
-    if (designed_pc != golden_pc) {
-        std::cout << "  err Cycle " << std::setw(3) << cycle << ": PC mismatch - Designed CPU: " 
-                  << std::setw(3) << (int)designed_pc << ", Golden CPU: " << std::setw(3) << (int)golden_pc << "\n";
-        match = false;
-    }
-    
-    // Compare all registers
-    for (int i = 0; i < 4; i++) {
-        uint8_t designed_reg = 0;
-        uint8_t golden_reg = golden_cpu->getRegister(i);
-        
-        // Get register value from hardware CPU
-        switch(i) {
-            case 0: designed_reg = designed_cpu->reg0_debug; break;
-            case 1: designed_reg = designed_cpu->reg1_debug; break;
-            case 2: designed_reg = designed_cpu->reg2_debug; break;
-            case 3: designed_reg = designed_cpu->reg3_debug; break;
-        }
-                
-        if (designed_reg != golden_reg) {
-            std::cout << "  err Cycle " << std::setw(3) << cycle << ": R" << i << " mismatch - Designed CPU: " 
-                      << std::setw(3) << (int)designed_reg << ", Golden CPU: " << std::setw(3) << (int)golden_reg << "\n";
-            match = false;
-        }
-    }
-    
-    return match;
-}
 
-bool compare_cpus(Vmain* designed_cpu, sCPU* golden_cpu, int cycle) {
-    bool match = true;
+bool compare_cpus(VminiRV* miniRV_cpu, GoldenModelCPU* golden_cpu, int cycle) {
     
-    // Compare PC (4-bit value stored in uint8_t)
-    uint8_t designed_pc = designed_cpu->pc_;
-    uint8_t golden_pc = golden_cpu->getPc();
+    // Compare PC (32-bit value)
+    uint32_t designed_pc = miniRV_cpu->pc_;
+    uint32_t golden_pc = golden_cpu->pc;
     
     if (designed_pc != golden_pc) {
-        std::cout << "  err Cycle " << std::setw(3) << cycle << ": PC mismatch - Designed CPU: " 
-                  << std::setw(3) << (int)designed_pc << ", Golden CPU: " << std::setw(3) << (int)golden_pc << "\n";
-        match = false;
+        std::cout << "  err Cycle " << std::setw(3) << cycle << ": PC mismatch - Designed CPU: 0x" 
+                  << std::hex << std::setfill('0') << std::setw(8) << designed_pc << std::dec
+                  << ", Golden CPU: 0x" << std::hex << std::setfill('0') << std::setw(8) << golden_pc << std::dec << "\n";
         throw std::runtime_error("PC mismatch");
     }
     
     // Compare all registers
+    uint32_t miniRV_registers[REGISTER_LIMIT];
+    uint32_t golden_registers[REGISTER_LIMIT];
+    memcpy(miniRV_registers, miniRV_cpu->registers, sizeof(uint32_t) * REGISTER_LIMIT);
+    memcpy(golden_registers, golden_cpu->registers, sizeof(uint32_t) * REGISTER_LIMIT);
 
-    uint32_t designed_registers[15 = designed_cpu->registers;
-    uint32_t golden_registers[15 = golden_cpu->getRegisters();
-
-    for (int i = 0; i < 15; i++) {
-                
-        if (designed_reg != golden_reg) {
-            std::cout << "  err Cycle " << std::setw(3) << cycle << ": R" << i << " mismatch - Designed CPU: " 
-                      << std::setw(3) << (int)designed_reg << ", Golden CPU: " << std::setw(3) << (int)golden_reg << "\n";
-            match = false;
+    for (int i = 0; i < REGISTER_LIMIT; i++) {
+        if (miniRV_registers[i] != golden_registers[i]) {
+            std::cout << "  err Cycle " << std::setw(3) << cycle << ": R" << i << " mismatch - Designed CPU: 0x" 
+                      << std::hex << std::setfill('0') << std::setw(8) << miniRV_registers[i] << std::dec
+                      << ", Golden CPU: 0x" << std::hex << std::setfill('0') << std::setw(8) << golden_registers[i] << std::dec << "\n";
+            throw std::runtime_error("Register mismatch");
         }
     }
-    
-    return match;
+
+    return true;
 }
 
 int main(int argc, char** argv) {
+    uint64_t time = 0;
+    bool test_result = false;
+    int test_count = 0;
+    int test_success = 0;
+ 
     // Initialize Verilator
     Verilated::commandArgs(argc, argv);
     Verilated::traceEverOn(true);
     
     // Create CPU and VCD trace
-    VminiRV* cpu = new VminiRV;
+    VminiRV* miniRV_cpu = new VminiRV;
     VerilatedVcdC* tfp = new VerilatedVcdC;
-    cpu->trace(tfp, 99);
+    miniRV_cpu->trace(tfp, 99);
     tfp->open("waveform_miniRV.vcd");
     
-    uint64_t time = 0;
-    bool test_result = false;
-    int test_count = 0;
-    int test_success = 0;
-    
-    std::cout << "Testing miniRV CPU\n";
-    std::cout << "==================\n\n";
-    
+    // Create golden model CPU
+    GoldenModelCPU golden_cpu;
+    golden_cpu.loadHexFile(INSTRUCTION_MEMORY_FILE);
+    golden_cpu.resetCPU();
+    golden_cpu.clockCycle();
+  
+  
     // Initialize CPU
-    cpu->clk = 0;
-    cpu->reset = 0;
-    cpu->eval();
+    miniRV_cpu->clk = 0;
+    miniRV_cpu->reset = 0;
+    miniRV_cpu->eval();
     tfp->dump(time++);
   
     
+    std::cout << "Testing miniRV CPU\n";
+    std::cout << "==================\n\n";
+  
+    for (int i = 0; i < 6000; i++) {
+        golden_cpu.clockCycle();
+        run_cycles(miniRV_cpu, tfp, time, 1);
 
+        if (!compare_cpus(miniRV_cpu, &golden_cpu, i)) {
+            std::cout << "  err Cycle " << std::setw(3) << i << ": CPU mismatch\n";
+            break;
+        }
+    }
 
     std::cout << "\n";
     
     // Cleanup
     tfp->close();
     delete tfp;
-    delete cpu;
+    delete miniRV_cpu;
     
     if (test_success == test_count) {
         std::cout << "✅ All " << test_success << " tests passed!\n";
