@@ -96,3 +96,7 @@ gtkwave waveform_imm.vcd
 ./golden_model_cpu.sh
 ./golden_model_cpu.sh logisim-bin/sum.hex
 ```
+
+548 = 0x224
+
+536 = 0x1218
