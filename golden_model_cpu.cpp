@@ -6,10 +6,11 @@
 #include <vector>
 #include <cstdint>
 #include <cstring>
+#include <bitset>
 
 // Golden Model CPU for miniRV (RISC-V RV32E subset)
 // This is a functional C++ model that executes instructions from hex files
-int CYCLE_LIMIT = 100;
+int CYCLE_LIMIT = 6000;
 
 class GoldenModelCPU {
 private:
@@ -22,11 +23,11 @@ public:
     uint32_t regs[REGISTER_LIMIT];        // 16 registers (x0-x15)
     
     // Instruction memory and data memory
-    static constexpr size_t IMEM_SIZE = 1024 * 1024;  // 1M words
-    static constexpr size_t DMEM_SIZE = 1024 * 1024;  // 1M words
+    static constexpr size_t IMEM_SIZE = 128 * 1024; 
+    static constexpr size_t DMEM_SIZE = 128 * 1024;
     
-    uint32_t imem[IMEM_SIZE];  // Instruction memory
-    uint8_t  dmem[DMEM_SIZE];  // Data memory (byte-addressable)
+    uint32_t imem[IMEM_SIZE];  // Instruction memory (word-addressable)
+    uint32_t dmem[DMEM_SIZE];  // Data memory (word-addressable, 32-bit data width)
     
     // Constructor
     GoldenModelCPU() : clock(false), reset(false), pc(0) {
@@ -86,6 +87,7 @@ public:
                 
                 if (word_addr < IMEM_SIZE) {
                     imem[word_addr] = instr;
+                    dmem[word_addr] = instr;
                 } else {
                     std::cerr << "Warning: Instruction address " << word_addr 
                               << " exceeds memory size" << std::endl;
@@ -98,6 +100,7 @@ public:
         file.close();
         return true;
     }
+
     
     // Reset CPU
     void resetCPU() {
@@ -154,6 +157,7 @@ public:
                 if (funct3 == 0x0 && funct7 == 0x0) {
                     if (rd < REGISTER_LIMIT && rd != 0 && rs1 < REGISTER_LIMIT && rs2 < REGISTER_LIMIT) {
                         regs[rd] = regs[rs1] + regs[rs2];
+                        std::cout << "ADD: rd = x" << (int)rd << " = 0x" << std::hex << regs[rd] << std::dec << std::endl;
                     } else {
                         std::cerr << "Error: Illegal register: rd = " << (int)rd << ", rs1 = " << (int)rs1 << ", rs2 = " << (int)rs2 << std::endl;
                     }
@@ -163,11 +167,12 @@ public:
             
             case 0x13: {  // I-Type: ADDI
                 std::cout << "ADDI: rd = x" << (int)rd 
-                << ", rs1 = x" << (int)rs1 
+                << ", rs1 = x" << (int)rs1 << "(0x" << std::hex << regs[rs1] << std::dec << ")"
                 << ", imm_i = " << imm_i << " (0x" << std::hex << imm_i << std::dec << ")" << std::endl;
                 if (funct3 == 0x0) {
                     if (rd < REGISTER_LIMIT && rd != 0 && rs1 < REGISTER_LIMIT) {
                         regs[rd] = regs[rs1] + imm_i;
+                        std::cout << "ADDI: rd = x" << (int)rd << " = 0x" << std::hex << regs[rd] << std::dec << std::endl;
                     } else {
                         std::cerr << "Error: Illegal register: rd = " << (int)rd << ", rs1 = " << (int)rs1 << std::endl;
                     }
@@ -177,7 +182,7 @@ public:
             
             case 0x37: {  // U-Type: LUI
                 std::cout << "LUI: rd = x" << (int)rd 
-                << ", imm_u = 0x" << std::hex << imm_u << std::dec << std::endl;  
+                << "<- imm_u = 0x" << std::hex << imm_u << std::dec << std::endl;  
                 if (rd < REGISTER_LIMIT && rd != 0) {
                     regs[rd] = imm_u;
                 } else {
@@ -193,25 +198,21 @@ public:
 
                 if (rd < REGISTER_LIMIT && rd != 0 && rs1 < REGISTER_LIMIT) {
                     uint32_t addr = regs[rs1] + imm_i;
-                    std::cout << "LOAD: addr = 0x" << std::hex << addr << std::dec << std::endl;
                     uint32_t word_addr = addr >> 2;
-                    uint8_t byte_offset = addr & 0x3;
                     
-                    if (word_addr < (DMEM_SIZE >> 2)) {
-                        uint32_t mem_word = 0;
-                        mem_word |= ((uint32_t)dmem[word_addr * 4 + 0]) << 0;
-                        mem_word |= ((uint32_t)dmem[word_addr * 4 + 1]) << 8;
-                        mem_word |= ((uint32_t)dmem[word_addr * 4 + 2]) << 16;
-                        mem_word |= ((uint32_t)dmem[word_addr * 4 + 3]) << 24;
+                    if (word_addr < DMEM_SIZE) {
+                        // Read 32-bit word directly (word-addressable memory)
+                        uint32_t dmem_rdata = dmem[word_addr];
                         
-                        if (funct3 == 0x2) {  // LW - Load word
+                        if (funct3 == 0x2) {  // LW - Load word (32-bit)
+                            std::cout << "LW: rd = x" << (int)rd 
+                                      << ", rs1 = x" << (int)rs1 
+                                      << ", imm_i = " << imm_i 
+                                      << ", addr = 0x" << std::hex << addr << std::dec 
+                                      << " (word_index: 0x" << std::hex << word_addr << std::dec << ")"
+                                      << std::endl;
                             if (rd != 0) {
-                                regs[rd] = mem_word;
-                            }
-                        } else if (funct3 == 0x4) {  // LBU - Load byte unsigned
-                            if (rd != 0) {
-                                uint8_t byte_val = (mem_word >> (byte_offset * 8)) & 0xFF;
-                                regs[rd] = (uint32_t)byte_val;  // Zero-extend
+                                regs[rd] = dmem_rdata;
                             }
                         }
                     }
@@ -220,26 +221,28 @@ public:
             }
             
             case 0x23: {  // S-Type: Store instructions
-                std::cout << "STORE: rs1 = x" << (int)rs1 
-                << ", rs2 = x" << (int)rs2 
+                std::cout << "STORE: rs1 = x" << (int)rs1 << "(0x" << std::hex << regs[rs1] << std::dec << ")"
+                << ", rs2 = x" << (int)rs2 << "(0x" << std::hex << regs[rs2] << std::dec << ")"
                 << ", imm_s = 0x" << std::hex << imm_s << std::dec << std::endl;
                 
                 if (rs1 < REGISTER_LIMIT && rs2 < REGISTER_LIMIT) {
                     uint32_t addr = regs[rs1] + imm_s;
                     uint32_t word_addr = addr >> 2;
-                    uint8_t byte_offset = addr & 0x3;
-                    
-                    if (word_addr < (DMEM_SIZE >> 2)) {
-                        if (funct3 == 0x2) {  // SW - Store word
-                            dmem[word_addr * 4 + 0] = (regs[rs2] >> 0) & 0xFF;
-                            dmem[word_addr * 4 + 1] = (regs[rs2] >> 8) & 0xFF;
-                            dmem[word_addr * 4 + 2] = (regs[rs2] >> 16) & 0xFF;
-                            dmem[word_addr * 4 + 3] = (regs[rs2] >> 24) & 0xFF;
-                        } else if (funct3 == 0x0) {  // SB - Store byte
-                            dmem[word_addr * 4 + byte_offset] = regs[rs2] & 0xFF;
+                    uint32_t dmem_wdata = regs[rs2];
+
+                    if (word_addr < DMEM_SIZE) {
+                        if (funct3 == 0x2) { // SW - Store word (32-bit)
+                            // Store full 32-bit word
+                            // funct3 = 0b010 (SW)
+                            dmem[word_addr] = dmem_wdata;
+                            std::cout << "STORE: dmem[0x" << std::hex << word_addr << std::dec << "] = 0x" << std::hex << dmem_wdata << std::dec 
+                            << " (real addr: 0x" << std::hex << addr << std::dec << ")"
+                            << std::endl;
+                        } else {
+                            std::cerr << "Error: Illegal function: funct3 = " << (int)funct3 << std::endl;
                         }
-                        std::cout << "STORE: addr = 0x" << std::hex << addr << std::dec << std::endl;
-                        std::cout << "STORE: value = 0x" << std::hex << regs[rs2] << std::dec << std::endl;
+                    } else {
+                        std::cerr << "Error: Illegal address: word_addr = " << (int)word_addr << std::endl;
                     }
                 } else {
                     std::cerr << "Error: Illegal register: rs1 = " << (int)rs1 << ", rs2 = " << (int)rs2 << std::endl;
@@ -261,8 +264,9 @@ public:
                         std::cerr << "Error: Illegal register: rd = " << (int)rd << ", rs1 = " << (int)rs1 << std::endl;
                     }
                 }
-                std::cout << "JALR: target = 0x" << std::hex << next_pc << std::dec 
-                << ", saved pc + 4 = 0x" << std::hex << pc_plus4 << std::dec << std::endl;
+                std::cout << "JALR: pc_new = 0x" << std::hex << next_pc << std::dec 
+                << ", pc_saved pc + 4 = 0x" << std::hex << pc_plus4 << std::dec 
+                << " in register x" << (int)rd << std::endl;
                 break;
             }
             
@@ -303,7 +307,7 @@ public:
         std::cout << "  PC: 0x" << std::hex << std::setfill('0') << std::setw(8) << pc << std::dec << "\n";
         std::cout << "  Registers:\n";
         for (int i = 0; i < REGISTER_LIMIT; i++) {
-            std::cout << "    x" << i << ": 0x" << std::hex << std::setfill('0') << std::setw(8) 
+            std::cout << "\t x" << i << ": 0x" << std::hex << std::setfill('0') << std::setw(8) 
                       << regs[i] << std::dec;
             if (i % 4 == 3) std::cout << "\n";
             else std::cout << "  ";
@@ -322,14 +326,9 @@ public:
     
     // Read data from memory
     uint32_t readMem(uint32_t addr) {
-        if (addr < DMEM_SIZE) {
-            uint32_t word_addr = addr >> 2;
-            uint32_t mem_word = 0;
-            mem_word |= ((uint32_t)dmem[word_addr * 4 + 0]) << 0;
-            mem_word |= ((uint32_t)dmem[word_addr * 4 + 1]) << 8;
-            mem_word |= ((uint32_t)dmem[word_addr * 4 + 2]) << 16;
-            mem_word |= ((uint32_t)dmem[word_addr * 4 + 3]) << 24;
-            return mem_word;
+        uint32_t word_addr = addr >> 2;
+        if (word_addr < DMEM_SIZE) {
+            return dmem[word_addr];  // Direct word access (32-bit data width)
         }
         return 0;
     }
@@ -344,13 +343,24 @@ int main(int argc, char** argv) {
     
     GoldenModelCPU cpu;
     
-    // Load instructions
-    std::cout << "Loading instructions from " << hex_file << "...\n";
+    // Load instructions into instruction memory
+    std::cout << "Loading instructions from " << hex_file << " into instruction memory...\n";
     if (!cpu.loadHexFile(hex_file)) {
         return 1;
     }
     for (int i = 0; i < 10; i++) {
-        std::cout << "imem[" << i << "] = 0x" << std::hex << cpu.imem[i] << std::dec << std::endl;
+        std::cout << "imem[" << i << "] = 0x" << std::hex << std::setfill('0') << std::setw(8) 
+                  << cpu.imem[i] << std::dec << std::endl;
+    }
+    
+    // Also load data into data memory (as per requirement: hex file contains both instructions and data)
+    std::cout << "Loading data from " << hex_file << " into data memory...\n";
+    // if (!cpu.loadHexFileToDmem(hex_file)) {
+    //     return 1;
+    // }
+    for (int i = 0; i < 10; i++) {
+        std::cout << "dmem[" << i << "] = 0x" << std::hex << std::setfill('0') << std::setw(8) 
+                  << cpu.dmem[i] << std::dec << std::endl;
     }
     
     // Reset CPU
