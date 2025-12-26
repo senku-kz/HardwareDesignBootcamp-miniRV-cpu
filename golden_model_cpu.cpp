@@ -10,7 +10,7 @@
 
 // Golden Model CPU for miniRV (RISC-V RV32E subset)
 // This is a functional C++ model that executes instructions from hex files
-int CYCLE_LIMIT = 6000;
+int CYCLE_LIMIT = 60;
 
 class GoldenModelCPU {
 private:
@@ -124,7 +124,7 @@ public:
         uint32_t instr = imem[word_index];
 
         std::cout << "PC: 0x" << std::hex << pc << std::dec << std::endl;
-        std::cout << "Instruction: 0x" << std::hex << instr << std::dec << std::endl;
+        std::cout << "Instruction: 0x" << std::hex << std::setfill('0') << std::setw(8) << instr << std::dec << std::endl;
         std::cout << "Instruction: 0b" << std::bitset<32>(instr) << std::endl;
         
         // Decode instruction
@@ -182,7 +182,7 @@ public:
             
             case 0x37: {  // U-Type: LUI
                 std::cout << "LUI: rd = x" << (int)rd 
-                << "<- imm_u = 0x" << std::hex << imm_u << std::dec << std::endl;  
+                << " <- imm_u = 0x" << std::hex << imm_u << std::dec << std::endl;  
                 if (rd < REGISTER_LIMIT && rd != 0) {
                     regs[rd] = imm_u;
                 } else {
@@ -194,7 +194,10 @@ public:
             case 0x03: {  // I-Type: Load instructions
                 std::cout << "LW: rd = x" << (int)rd 
                 << ", rs1 = x" << (int)rs1 
-                << ", imm_i = " << imm_i << " (0x" << std::hex << imm_i << std::dec << ")" << std::endl;
+                << ", imm_i = " << imm_i << " (0x" << std::hex << imm_i << std::dec << ")" 
+                << ", funct3 = 0b" << std::bitset<3>(funct3) << std::dec
+                << ", funct7 = 0b" << std::bitset<7>(funct7) << std::dec
+                << std::endl;
 
                 if (rd < REGISTER_LIMIT && rd != 0 && rs1 < REGISTER_LIMIT) {
                     uint32_t addr = regs[rs1] + imm_i;
@@ -214,6 +217,20 @@ public:
                             if (rd != 0) {
                                 regs[rd] = dmem_rdata;
                             }
+                        } else if (funct3 == 0b100) {  // LBU - Load byte unsigned (8-bit)
+                            //Load Byte Unsigned: Loads 8 bits from memory and zero-extends them to 32 bits.
+                            //addr = R[rs1] + imm; R[rd] = {24'b0, M[addr][7:0]}
+                            std::cout << "LBU: rd = x" << (int)rd 
+                                      << ", rs1 = x" << (int)rs1 
+                                      << ", imm_i = " << imm_i 
+                                      << ", addr = 0x" << std::hex << addr << std::dec 
+                                      << " (word_index: 0x" << std::hex << word_addr << std::dec << ")"
+                                      << std::endl;
+                            if (rd != 0) {
+                                regs[rd] = (uint32_t)(dmem_rdata & 0x000000FF);
+                            }
+                        } else {
+                            std::cerr << "Error: Illegal function: funct3 = " << (int)funct3 << std::endl;
                         }
                     }
                 }
@@ -223,7 +240,10 @@ public:
             case 0x23: {  // S-Type: Store instructions
                 std::cout << "STORE: rs1 = x" << (int)rs1 << "(0x" << std::hex << regs[rs1] << std::dec << ")"
                 << ", rs2 = x" << (int)rs2 << "(0x" << std::hex << regs[rs2] << std::dec << ")"
-                << ", imm_s = 0x" << std::hex << imm_s << std::dec << std::endl;
+                << ", imm_s = 0x" << std::hex << imm_s << std::dec 
+                << ", funct3 = 0b" << std::bitset<3>(funct3) << std::dec
+                << ", funct7 = 0b" << std::bitset<7>(funct7) << std::dec
+                << std::endl;
                 
                 if (rs1 < REGISTER_LIMIT && rs2 < REGISTER_LIMIT) {
                     uint32_t addr = regs[rs1] + imm_s;
@@ -235,9 +255,16 @@ public:
                             // Store full 32-bit word
                             // funct3 = 0b010 (SW)
                             dmem[word_addr] = dmem_wdata;
-                            std::cout << "STORE: dmem[0x" << std::hex << word_addr << std::dec << "] = 0x" << std::hex << dmem_wdata << std::dec 
-                            << " (real addr: 0x" << std::hex << addr << std::dec << ")"
+                            std::cout << "STORE: dmem[0x" << std::hex << addr << std::dec << "] = 0x" << std::hex << dmem_wdata << std::dec 
+                            << " (real addr >> 2: 0x" << std::hex << word_addr << std::dec << ")"
                             << std::endl;
+                        } else if (funct3 == 0b000) {  // SB - Store byte (8-bit)
+                            // Store Byte: Stores the lowest 8 bits of a register into memory.
+                            // addr = R[rs1] + imm; M[addr] = R[rs2][7:0]
+                            std::cout << "SB: dmem[0x" << std::hex << addr << std::dec << "] = 0x" << std::hex << dmem_wdata << std::dec 
+                            << " (real addr >> 2: 0x" << std::hex << word_addr << std::dec << ")"
+                            << std::endl;
+                            dmem[word_addr] = (uint32_t)(dmem_wdata & 0x000000FF);
                         } else {
                             std::cerr << "Error: Illegal function: funct3 = " << (int)funct3 << std::endl;
                         }
