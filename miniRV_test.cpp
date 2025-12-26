@@ -51,139 +51,71 @@ void run_cycles(VminiRV* cpu, VerilatedVcdC* tfp, uint64_t& time, int cycles) {
     }
 }
 
-// Test: ADD instruction
-// add x1, x2, x3  -> x1 = x2 + x3
-bool test_add(VminiRV* cpu, VerilatedVcdC* tfp, uint64_t& time) {
-    std::cout << "Test: ADD instruction\n";
-    std::cout << "  Instruction: add x1, x2, x3\n";
-    std::cout << "  Expected: x1 = x2 + x3\n";
+bool compare_cpus(Vmain* designed_cpu, sCPU* golden_cpu, int cycle) {
+    bool match = true;
     
-    // Reset CPU
-    cpu->reset = 0;
-    run_cycles(cpu, tfp, time, 1);
-    cpu->reset = 1;
-
-    int x2 = 5;
-    int x3 = 3;
-    int expected_x1 = x2 + x3;
-
-    cpu->rs1 = x2;
-    cpu->rs2 = x3;
-    cpu->rd = 1;
-    cpu->alu_op = 0;
-    cpu->alu_src = 0;
-    cpu->wb_sel = 0;
+    // Compare PC (4-bit value stored in uint8_t)
+    uint8_t designed_pc = designed_cpu->pc_debug;
+    uint8_t golden_pc = golden_cpu->getPc();
     
-    // Initialize registers x2=5, x3=3 via instructions
-    // This requires setting up instruction memory properly
-    // For now, we'll mark as placeholder
-    std::cout << "  NOTE: Full test requires instruction memory setup\n";
+    if (designed_pc != golden_pc) {
+        std::cout << "  err Cycle " << std::setw(3) << cycle << ": PC mismatch - Designed CPU: " 
+                  << std::setw(3) << (int)designed_pc << ", Golden CPU: " << std::setw(3) << (int)golden_pc << "\n";
+        match = false;
+    }
     
-    return true;
+    // Compare all registers
+    for (int i = 0; i < 4; i++) {
+        uint8_t designed_reg = 0;
+        uint8_t golden_reg = golden_cpu->getRegister(i);
+        
+        // Get register value from hardware CPU
+        switch(i) {
+            case 0: designed_reg = designed_cpu->reg0_debug; break;
+            case 1: designed_reg = designed_cpu->reg1_debug; break;
+            case 2: designed_reg = designed_cpu->reg2_debug; break;
+            case 3: designed_reg = designed_cpu->reg3_debug; break;
+        }
+                
+        if (designed_reg != golden_reg) {
+            std::cout << "  err Cycle " << std::setw(3) << cycle << ": R" << i << " mismatch - Designed CPU: " 
+                      << std::setw(3) << (int)designed_reg << ", Golden CPU: " << std::setw(3) << (int)golden_reg << "\n";
+            match = false;
+        }
+    }
+    
+    return match;
 }
 
-// Test: ADDI instruction
-// addi x1, x2, 10  -> x1 = x2 + 10
-bool test_addi(VminiRV* cpu, VerilatedVcdC* tfp, uint64_t& time) {
-    std::cout << "Test: ADDI instruction\n";
-    std::cout << "  Instruction: addi x1, x2, 10\n";
-    std::cout << "  Expected: x1 = x2 + 10\n";
+bool compare_cpus(Vmain* designed_cpu, sCPU* golden_cpu, int cycle) {
+    bool match = true;
     
-    std::cout << "  NOTE: Full test requires instruction memory setup\n";
+    // Compare PC (4-bit value stored in uint8_t)
+    uint8_t designed_pc = designed_cpu->pc_;
+    uint8_t golden_pc = golden_cpu->getPc();
     
-    return true;
-}
+    if (designed_pc != golden_pc) {
+        std::cout << "  err Cycle " << std::setw(3) << cycle << ": PC mismatch - Designed CPU: " 
+                  << std::setw(3) << (int)designed_pc << ", Golden CPU: " << std::setw(3) << (int)golden_pc << "\n";
+        match = false;
+        throw std::runtime_error("PC mismatch");
+    }
+    
+    // Compare all registers
 
-// Test: LUI instruction
-// lui x1, 0x12345  -> x1 = 0x12345000
-bool test_lui(VminiRV* cpu, VerilatedVcdC* tfp, uint64_t& time) {
-    std::cout << "Test: LUI instruction\n";
-    std::cout << "  Instruction: lui x1, 0x12345\n";
-    std::cout << "  Expected: x1 = 0x12345000\n";
-    
-    std::cout << "  NOTE: Full test requires instruction memory setup\n";
-    
-    return true;
-}
+    uint32_t designed_registers[15 = designed_cpu->registers;
+    uint32_t golden_registers[15 = golden_cpu->getRegisters();
 
-// Test: LW instruction
-// lw x1, 0(x2)  -> x1 = mem[x2 + 0]
-bool test_lw(VminiRV* cpu, VerilatedVcdC* tfp, uint64_t& time) {
-    std::cout << "Test: LW instruction\n";
-    std::cout << "  Instruction: lw x1, 0(x2)\n";
-    std::cout << "  Expected: x1 = mem[x2 + 0]\n";
+    for (int i = 0; i < 15; i++) {
+                
+        if (designed_reg != golden_reg) {
+            std::cout << "  err Cycle " << std::setw(3) << cycle << ": R" << i << " mismatch - Designed CPU: " 
+                      << std::setw(3) << (int)designed_reg << ", Golden CPU: " << std::setw(3) << (int)golden_reg << "\n";
+            match = false;
+        }
+    }
     
-    std::cout << "  NOTE: Full test requires instruction memory setup\n";
-    
-    return true;
-}
-
-// Test: LBU instruction
-// lbu x1, 0(x2)  -> x1 = zero_extend(mem[x2 + 0][7:0])
-bool test_lbu(VminiRV* cpu, VerilatedVcdC* tfp, uint64_t& time) {
-    std::cout << "Test: LBU instruction\n";
-    std::cout << "  Instruction: lbu x1, 0(x2)\n";
-    std::cout << "  Expected: x1 = zero_extend(mem[x2 + 0][7:0])\n";
-    
-    std::cout << "  NOTE: Full test requires instruction memory setup\n";
-    
-    return true;
-}
-
-// Test: SW instruction
-// sw x1, 0(x2)  -> mem[x2 + 0] = x1
-bool test_sw(VminiRV* cpu, VerilatedVcdC* tfp, uint64_t& time) {
-    std::cout << "Test: SW instruction\n";
-    std::cout << "  Instruction: sw x1, 0(x2)\n";
-    std::cout << "  Expected: mem[x2 + 0] = x1\n";
-    
-    std::cout << "  NOTE: Full test requires instruction memory setup\n";
-    
-    return true;
-}
-
-// Test: SB instruction
-// sb x1, 0(x2)  -> mem[x2 + 0][7:0] = x1[7:0]
-bool test_sb(VminiRV* cpu, VerilatedVcdC* tfp, uint64_t& time) {
-    std::cout << "Test: SB instruction\n";
-    std::cout << "  Instruction: sb x1, 0(x2)\n";
-    std::cout << "  Expected: mem[x2 + 0][7:0] = x1[7:0]\n";
-    
-    std::cout << "  NOTE: Full test requires instruction memory setup\n";
-    
-    return true;
-}
-
-// Test: JALR instruction
-// jalr x1, 0(x2)  -> x1 = PC + 4, PC = (x2 + 0) & ~1
-bool test_jalr(VminiRV* cpu, VerilatedVcdC* tfp, uint64_t& time) {
-    std::cout << "Test: JALR instruction\n";
-    std::cout << "  Instruction: jalr x1, 0(x2)\n";
-    std::cout << "  Expected: x1 = PC + 4, PC = (x2 + 0) & ~1\n";
-    
-    std::cout << "  NOTE: Full test requires instruction memory setup\n";
-    
-    return true;
-}
-
-// Comprehensive test program
-// This test runs a sequence of instructions and verifies results
-bool test_comprehensive_program(VminiRV* cpu, VerilatedVcdC* tfp, uint64_t& time) {
-    std::cout << "Test: Comprehensive Program\n";
-    std::cout << "  Running sequence: addi, add, lui, sw, lw, lbu, sb, jalr\n";
-    
-    // Reset CPU
-    cpu->reset = 0;
-    run_cycles(cpu, tfp, time, 1);
-    cpu->reset = 1;
-    
-    // Run for multiple cycles to execute program
-    // The actual program would be loaded in instruction memory
-    run_cycles(cpu, tfp, time, 50);
-    
-    std::cout << "  NOTE: Full test requires instruction memory setup\n";
-    
-    return true;
+    return match;
 }
 
 int main(int argc, char** argv) {
@@ -210,52 +142,10 @@ int main(int argc, char** argv) {
     cpu->reset = 0;
     cpu->eval();
     tfp->dump(time++);
+  
     
-    // Test 1: ADD
-    test_result = test_add(cpu, tfp, time);
-    if (test_result) test_success++;
-    test_count++;
-    
-    // // Test 2: ADDI
-    // test_result = test_addi(cpu, tfp, time);
-    // if (test_result) test_success++;
-    // test_count++;
-    
-    // // Test 3: LUI
-    // test_result = test_lui(cpu, tfp, time);
-    // if (test_result) test_success++;
-    // test_count++;
-    
-    // // Test 4: LW
-    // test_result = test_lw(cpu, tfp, time);
-    // if (test_result) test_success++;
-    // test_count++;
-    
-    // // Test 5: LBU
-    // test_result = test_lbu(cpu, tfp, time);
-    // if (test_result) test_success++;
-    // test_count++;
-    
-    // // Test 6: SW
-    // test_result = test_sw(cpu, tfp, time);
-    // if (test_result) test_success++;
-    // test_count++;
-    
-    // // Test 7: SB
-    // test_result = test_sb(cpu, tfp, time);
-    // if (test_result) test_success++;
-    // test_count++;
-    
-    // // Test 8: JALR
-    // test_result = test_jalr(cpu, tfp, time);
-    // if (test_result) test_success++;
-    // test_count++;
-    
-    // // Test 9: Comprehensive program
-    // test_result = test_comprehensive_program(cpu, tfp, time);
-    // if (test_result) test_success++;
-    // test_count++;
-    
+
+
     std::cout << "\n";
     
     // Cleanup

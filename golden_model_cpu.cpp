@@ -20,7 +20,7 @@ public:
     bool clock;
     bool reset;
     uint32_t pc;              // Program Counter
-    uint32_t regs[REGISTER_LIMIT];        // 16 registers (x0-x15)
+    uint32_t registers[REGISTER_LIMIT];        // 16 registers (x0-x15)
     
     // Instruction memory and data memory
     static constexpr size_t IMEM_SIZE = 128 * 1024; 
@@ -32,8 +32,8 @@ public:
     // Constructor
     GoldenModelCPU() : clock(false), reset(false), pc(0) {
         // Initialize registers (x0 is always 0, others can be 0 initially)
-        for (int i = 0; i < 16; i++) {
-            regs[i] = 0;
+        for (int i = 0; i < REGISTER_LIMIT; i++) {
+            registers[i] = 0;
         }
         
         // Initialize memories
@@ -108,7 +108,7 @@ public:
         reset = true;
         pc = 0;
         for (int i = 0; i < REGISTER_LIMIT; i++) {
-            regs[i] = 0;
+            registers[i] = 0;
         }
         reset = false;
     }
@@ -158,8 +158,8 @@ public:
                 << std::endl;
                 if (funct3 == 0x0 && funct7 == 0x0) {
                     if (rd < REGISTER_LIMIT && rs1 < REGISTER_LIMIT && rs2 < REGISTER_LIMIT) {
-                        regs[rd] = regs[rs1] + regs[rs2];
-                        std::cout << "ADD: rd = x" << (int)rd << " = 0x" << std::hex << regs[rd] << std::dec << std::endl;
+                        registers[rd] = registers[rs1] + registers[rs2];
+                        std::cout << "ADD: rd = x" << (int)rd << " = 0x" << std::hex << registers[rd] << std::dec << std::endl;
                     } else {
                         std::cerr << "Error: Illegal register: rd = " << (int)rd << ", rs1 = " << (int)rs1 << ", rs2 = " << (int)rs2 << std::endl;
                         // throw std::runtime_error("Illegal register");
@@ -173,12 +173,12 @@ public:
             
             case 0x13: {  // I-Type: ADDI
                 std::cout << "ADDI: rd = x" << (int)rd 
-                << ", rs1 = x" << (int)rs1 << "(0x" << std::hex << regs[rs1] << std::dec << ")"
+                << ", rs1 = x" << (int)rs1 << "(0x" << std::hex << registers[rs1] << std::dec << ")"
                 << ", imm_i = " << imm_i << " (0x" << std::hex << imm_i << std::dec << ")" << std::endl;
                 if (funct3 == 0x0) {
                     if (rd < REGISTER_LIMIT && rs1 < REGISTER_LIMIT) {
-                        regs[rd] = regs[rs1] + imm_i;
-                        std::cout << "ADDI: rd = x" << (int)rd << " = 0x" << std::hex << regs[rd] << std::dec << std::endl;
+                        registers[rd] = registers[rs1] + imm_i;
+                        std::cout << "ADDI: rd = x" << (int)rd << " = 0x" << std::hex << registers[rd] << std::dec << std::endl;
                     } else {
                         std::cerr << "Error: Illegal register: rd = " << (int)rd << ", rs1 = " << (int)rs1 << std::endl;
                         throw std::runtime_error("Illegal register");
@@ -194,7 +194,7 @@ public:
                 std::cout << "LUI: rd = x" << (int)rd 
                 << " <- imm_u = 0x" << std::hex << imm_u << std::dec << std::endl;  
                 if (rd < REGISTER_LIMIT && rd != 0) {
-                    regs[rd] = imm_u;
+                    registers[rd] = imm_u;
                 } else {
                     std::cerr << "Error: Illegal register: rd = " << (int)rd << std::endl;
                     throw std::runtime_error("Illegal register");
@@ -211,7 +211,7 @@ public:
                 << std::endl;
 
                 if (rd < REGISTER_LIMIT && rs1 < REGISTER_LIMIT) {
-                    uint32_t addr = regs[rs1] + imm_i;
+                    uint32_t addr = registers[rs1] + imm_i;
                     uint32_t word_addr = addr >> 2;
                     
                     if (word_addr < DMEM_SIZE) {
@@ -226,7 +226,7 @@ public:
                                       << " (word_index: 0x" << std::hex << word_addr << std::dec << ")"
                                       << std::endl;
                             if (rd != 0) {
-                                regs[rd] = dmem_rdata;
+                                registers[rd] = dmem_rdata;
                             }
                         } else if (funct3 == 0b100) {  // LBU - Load byte unsigned (8-bit)
                             //Load Byte Unsigned: Loads 8 bits from memory and zero-extends them to 32 bits.
@@ -238,7 +238,7 @@ public:
                                       << " (word_index: 0x" << std::hex << word_addr << std::dec << ")"
                                       << std::endl;
                             if (rd != 0) {
-                                regs[rd] = (uint32_t)(dmem_rdata & 0x000000FF);
+                                registers[rd] = (uint32_t)(dmem_rdata & 0x000000FF);
                             }
                         } else {
                             std::cerr << "Error: Illegal function: funct3 = 0b" << std::bitset<3>(funct3) << std::endl;
@@ -250,17 +250,17 @@ public:
             }
             
             case 0x23: {  // S-Type: Store instructions
-                std::cout << "STORE: rs1 = x" << (int)rs1 << "(0x" << std::hex << regs[rs1] << std::dec << ")"
-                << ", rs2 = x" << (int)rs2 << "(0x" << std::hex << regs[rs2] << std::dec << ")"
+                std::cout << "STORE: rs1 = x" << (int)rs1 << "(0x" << std::hex << registers[rs1] << std::dec << ")"
+                << ", rs2 = x" << (int)rs2 << "(0x" << std::hex << registers[rs2] << std::dec << ")"
                 << ", imm_s = 0x" << std::hex << imm_s << std::dec 
                 << ", funct3 = 0b" << std::bitset<3>(funct3) << std::dec
                 << ", funct7 = 0b" << std::bitset<7>(funct7) << std::dec
                 << std::endl;
                 
                 if (rs1 < REGISTER_LIMIT && rs2 < REGISTER_LIMIT) {
-                    uint32_t addr = regs[rs1] + imm_s;
+                    uint32_t addr = registers[rs1] + imm_s;
                     uint32_t word_addr = addr >> 2;
-                    uint32_t dmem_wdata = regs[rs2];
+                    uint32_t dmem_wdata = registers[rs2];
 
                     if (word_addr < DMEM_SIZE) {
                         if (funct3 == 0x2) { // SW - Store word (32-bit)
@@ -299,8 +299,8 @@ public:
                 
                 if (funct3 == 0x0) {
                     if (rd < REGISTER_LIMIT && rs1 < REGISTER_LIMIT) {
-                        next_pc = (regs[rs1] + imm_i) & 0xFFFFFFFE;  // Clear LSB
-                        regs[rd] = pc_plus4;
+                        next_pc = (registers[rs1] + imm_i) & 0xFFFFFFFE;  // Clear LSB
+                        registers[rd] = pc_plus4;
                         // next_pc = target;
                     } else {
                         std::cerr << "Error: Illegal register: rd = " << (int)rd << ", rs1 = " << (int)rs1 << std::endl;
@@ -323,7 +323,7 @@ public:
         pc = next_pc;
         
         // Ensure x0 is always zero
-        regs[0] = 0;
+        registers[0] = 0;
         
         return true;
     }
@@ -351,7 +351,7 @@ public:
         std::cout << "  Registers:\n";
         for (int i = 0; i < REGISTER_LIMIT; i++) {
             std::cout << "\t x" << i << ": 0x" << std::hex << std::setfill('0') << std::setw(8) 
-                      << regs[i] << std::dec;
+                      << registers[i] << std::dec;
             if (i % 4 == 3) std::cout << "\n";
             else std::cout << "  ";
         }
