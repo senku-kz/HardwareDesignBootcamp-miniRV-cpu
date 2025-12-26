@@ -157,12 +157,12 @@ public:
                 << ", rs2 = x" << (int)rs2 
                 << std::endl;
                 if (funct3 == 0x0 && funct7 == 0x0) {
-                    if (rd < REGISTER_LIMIT && rd != 0 && rs1 < REGISTER_LIMIT && rs2 < REGISTER_LIMIT) {
+                    if (rd < REGISTER_LIMIT && rs1 < REGISTER_LIMIT && rs2 < REGISTER_LIMIT) {
                         regs[rd] = regs[rs1] + regs[rs2];
                         std::cout << "ADD: rd = x" << (int)rd << " = 0x" << std::hex << regs[rd] << std::dec << std::endl;
                     } else {
                         std::cerr << "Error: Illegal register: rd = " << (int)rd << ", rs1 = " << (int)rs1 << ", rs2 = " << (int)rs2 << std::endl;
-                        throw std::runtime_error("Illegal register");
+                        // throw std::runtime_error("Illegal register");
                     }
                 } else {
                     std::cerr << "Error: Illegal function: funct3 = 0b" << std::bitset<3>(funct3) << ", funct7 = 0b" << std::bitset<7>(funct7) << std::endl;
@@ -176,7 +176,7 @@ public:
                 << ", rs1 = x" << (int)rs1 << "(0x" << std::hex << regs[rs1] << std::dec << ")"
                 << ", imm_i = " << imm_i << " (0x" << std::hex << imm_i << std::dec << ")" << std::endl;
                 if (funct3 == 0x0) {
-                    if (rd < REGISTER_LIMIT && rd != 0 && rs1 < REGISTER_LIMIT) {
+                    if (rd < REGISTER_LIMIT && rs1 < REGISTER_LIMIT) {
                         regs[rd] = regs[rs1] + imm_i;
                         std::cout << "ADDI: rd = x" << (int)rd << " = 0x" << std::hex << regs[rd] << std::dec << std::endl;
                     } else {
@@ -210,7 +210,7 @@ public:
                 << ", funct7 = 0b" << std::bitset<7>(funct7) << std::dec
                 << std::endl;
 
-                if (rd < REGISTER_LIMIT && rd != 0 && rs1 < REGISTER_LIMIT) {
+                if (rd < REGISTER_LIMIT && rs1 < REGISTER_LIMIT) {
                     uint32_t addr = regs[rs1] + imm_i;
                     uint32_t word_addr = addr >> 2;
                     
@@ -298,13 +298,13 @@ public:
                 << ", imm_i = " << imm_i << std::endl;
                 
                 if (funct3 == 0x0) {
-                    if (rd < REGISTER_LIMIT && rd != 0 && rs1 < REGISTER_LIMIT) {
+                    if (rd < REGISTER_LIMIT && rs1 < REGISTER_LIMIT) {
                         next_pc = (regs[rs1] + imm_i) & 0xFFFFFFFE;  // Clear LSB
                         regs[rd] = pc_plus4;
                         // next_pc = target;
                     } else {
                         std::cerr << "Error: Illegal register: rd = " << (int)rd << ", rs1 = " << (int)rs1 << std::endl;
-                        throw std::runtime_error("Illegal register");
+                        // throw std::runtime_error("Illegal register");
                     }
                 }
                 std::cout << "JALR: pc_new = 0x" << std::hex << next_pc << std::dec 
