@@ -87,3 +87,12 @@ make -C obj_dir -f Vimmediate_extend.mk
 ./obj_dir/Vimmediate_extend
 gtkwave waveform_imm.vcd
 ```
+
+
+
+# Check Golden model
+```shell
+./golden_model_cpu.sh logisim-bin/task-1.hex
+./golden_model_cpu.sh
+./golden_model_cpu.sh logisim-bin/sum.hex
+```
