@@ -10,7 +10,7 @@
 
 // Golden Model CPU for miniRV (RISC-V RV32E subset)
 // This is a functional C++ model that executes instructions from hex files
-int CYCLE_LIMIT = 60;
+int CYCLE_LIMIT = 6000;
 
 class GoldenModelCPU {
 private:
@@ -91,6 +91,7 @@ public:
                 } else {
                     std::cerr << "Warning: Instruction address " << word_addr 
                               << " exceeds memory size" << std::endl;
+                    throw std::runtime_error("Memory address out of bounds");
                 }
                 
                 offset++;
@@ -118,6 +119,7 @@ public:
         uint32_t word_index = pc >> 2;
         if (word_index >= IMEM_SIZE) {
             std::cerr << "Error: PC out of bounds: 0x" << std::hex << pc << std::dec << std::endl;
+            throw std::runtime_error("PC out of bounds");
             return false;
         }
         
@@ -160,7 +162,11 @@ public:
                         std::cout << "ADD: rd = x" << (int)rd << " = 0x" << std::hex << regs[rd] << std::dec << std::endl;
                     } else {
                         std::cerr << "Error: Illegal register: rd = " << (int)rd << ", rs1 = " << (int)rs1 << ", rs2 = " << (int)rs2 << std::endl;
+                        throw std::runtime_error("Illegal register");
                     }
+                } else {
+                    std::cerr << "Error: Illegal function: funct3 = 0b" << std::bitset<3>(funct3) << ", funct7 = 0b" << std::bitset<7>(funct7) << std::endl;
+                    throw std::runtime_error("Illegal function");
                 }
                 break;
             }
@@ -175,7 +181,11 @@ public:
                         std::cout << "ADDI: rd = x" << (int)rd << " = 0x" << std::hex << regs[rd] << std::dec << std::endl;
                     } else {
                         std::cerr << "Error: Illegal register: rd = " << (int)rd << ", rs1 = " << (int)rs1 << std::endl;
+                        throw std::runtime_error("Illegal register");
                     }
+                } else {
+                    std::cerr << "Error: Illegal function: funct3 = 0b" << std::bitset<3>(funct3) << ", funct7 = 0b" << std::bitset<7>(funct7) << std::endl;
+                    throw std::runtime_error("Illegal function");
                 }
                 break;
             }
@@ -187,6 +197,7 @@ public:
                     regs[rd] = imm_u;
                 } else {
                     std::cerr << "Error: Illegal register: rd = " << (int)rd << std::endl;
+                    throw std::runtime_error("Illegal register");
                 }
                 break;
             }
@@ -230,7 +241,8 @@ public:
                                 regs[rd] = (uint32_t)(dmem_rdata & 0x000000FF);
                             }
                         } else {
-                            std::cerr << "Error: Illegal function: funct3 = " << (int)funct3 << std::endl;
+                            std::cerr << "Error: Illegal function: funct3 = 0b" << std::bitset<3>(funct3) << std::endl;
+                            throw std::runtime_error("Illegal function");
                         }
                     }
                 }
@@ -266,13 +278,16 @@ public:
                             << std::endl;
                             dmem[word_addr] = (uint32_t)(dmem_wdata & 0x000000FF);
                         } else {
-                            std::cerr << "Error: Illegal function: funct3 = " << (int)funct3 << std::endl;
+                            std::cerr << "Error: Illegal function: funct3 = 0b" << std::bitset<3>(funct3) << std::endl;
+                            throw std::runtime_error("Illegal function");
                         }
                     } else {
-                        std::cerr << "Error: Illegal address: word_addr = " << (int)word_addr << std::endl;
+                        std::cerr << "Error: Illegal address: word_addr = 0x" << std::hex << word_addr << std::dec << std::endl;
+                        throw std::runtime_error("Illegal address");
                     }
                 } else {
                     std::cerr << "Error: Illegal register: rs1 = " << (int)rs1 << ", rs2 = " << (int)rs2 << std::endl;
+                    throw std::runtime_error("Illegal register");
                 }
                 break;
             }
@@ -289,6 +304,7 @@ public:
                         // next_pc = target;
                     } else {
                         std::cerr << "Error: Illegal register: rd = " << (int)rd << ", rs1 = " << (int)rs1 << std::endl;
+                        throw std::runtime_error("Illegal register");
                     }
                 }
                 std::cout << "JALR: pc_new = 0x" << std::hex << next_pc << std::dec 
