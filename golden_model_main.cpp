@@ -14,6 +14,8 @@ int main(int argc, char** argv) {
     if (argc > 1) {
         hex_file = argv[1];
     }
+
+    DEBUG_MODE = true;
     
     GoldenModelCPU cpu;
     

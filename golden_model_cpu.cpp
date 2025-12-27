@@ -12,6 +12,7 @@
 // This is a functional C++ model that executes instructions from hex files
 int CYCLE_LIMIT = 6000;
 
+bool DEBUG_MODE = false;
 
 // GoldenModelCPU class implementation
 
@@ -113,9 +114,11 @@ bool GoldenModelCPU::executeInstruction() {
     
     uint32_t instr = imem[word_index];
 
-    std::cout << "PC: 0x" << std::hex << pc << std::dec << std::endl;
-    std::cout << "Instruction: 0x" << std::hex << std::setfill('0') << std::setw(8) << instr << std::dec << std::endl;
-    std::cout << "Instruction: 0b" << std::bitset<32>(instr) << std::endl;
+    if (DEBUG_MODE) {
+        std::cout << "PC: 0x" << std::hex << pc << std::dec << std::endl;
+        std::cout << "Instruction: 0x" << std::hex << std::setfill('0') << std::setw(8) << instr << std::dec << std::endl;
+        std::cout << "Instruction: 0b" << std::bitset<32>(instr) << std::endl;
+    }
     
     // Decode instruction
     uint8_t opcode = instr & 0x7F;
@@ -140,14 +143,19 @@ bool GoldenModelCPU::executeInstruction() {
     // Execute instruction based on opcode
     switch (opcode) {
         case 0x33: {  // R-Type: ADD
-            std::cout << "ADD: rd = x" << (int)rd 
-            << ", rs1 = x" << (int)rs1 
-            << ", rs2 = x" << (int)rs2 
-            << std::endl;
+            if (DEBUG_MODE) {
+                std::cout << "ADD: rd = x" << (int)rd 
+                << ", rs1 = x" << (int)rs1 
+                << ", rs2 = x" << (int)rs2 
+                << std::endl;
+            }
+
             if (funct3 == 0x0 && funct7 == 0x0) {
                 if (rd < REGISTER_LIMIT && rs1 < REGISTER_LIMIT && rs2 < REGISTER_LIMIT) {
                     registers[rd] = registers[rs1] + registers[rs2];
-                    std::cout << "ADD: rd = x" << (int)rd << " = 0x" << std::hex << registers[rd] << std::dec << std::endl;
+                    if (DEBUG_MODE) {
+                        std::cout << "ADD: rd = x" << (int)rd << " = 0x" << std::hex << registers[rd] << std::dec << std::endl;
+                    }
                 } else {
                     std::cerr << "Error: Illegal register: rd = " << (int)rd << ", rs1 = " << (int)rs1 << ", rs2 = " << (int)rs2 << std::endl;
                     // throw std::runtime_error("Illegal register");
@@ -160,13 +168,17 @@ bool GoldenModelCPU::executeInstruction() {
         }
         
         case 0x13: {  // I-Type: ADDI
-            std::cout << "ADDI: rd = x" << (int)rd 
-            << ", rs1 = x" << (int)rs1 << "(0x" << std::hex << registers[rs1] << std::dec << ")"
-            << ", imm_i = " << imm_i << " (0x" << std::hex << imm_i << std::dec << ")" << std::endl;
+            if (DEBUG_MODE) {
+                std::cout << "ADDI: rd = x" << (int)rd 
+                << ", rs1 = x" << (int)rs1 << "(0x" << std::hex << registers[rs1] << std::dec << ")"
+                << ", imm_i = " << imm_i << " (0x" << std::hex << imm_i << std::dec << ")" << std::endl;
+            }
             if (funct3 == 0x0) {
                 if (rd < REGISTER_LIMIT && rs1 < REGISTER_LIMIT) {
                     registers[rd] = registers[rs1] + imm_i;
-                    std::cout << "ADDI: rd = x" << (int)rd << " = 0x" << std::hex << registers[rd] << std::dec << std::endl;
+                    if (DEBUG_MODE) {
+                        std::cout << "ADDI: rd = x" << (int)rd << " = 0x" << std::hex << registers[rd] << std::dec << std::endl;
+                    }
                 } else {
                     std::cerr << "Error: Illegal register: rd = " << (int)rd << ", rs1 = " << (int)rs1 << std::endl;
                     throw std::runtime_error("Illegal register");
@@ -179,8 +191,10 @@ bool GoldenModelCPU::executeInstruction() {
         }
         
         case 0x37: {  // U-Type: LUI
-            std::cout << "LUI: rd = x" << (int)rd 
-            << " <- imm_u = 0x" << std::hex << imm_u << std::dec << std::endl;  
+            if (DEBUG_MODE) {
+                std::cout << "LUI: rd = x" << (int)rd 
+                << " <- imm_u = 0x" << std::hex << imm_u << std::dec << std::endl;
+            }
             if (rd < REGISTER_LIMIT && rd != 0) {
                 registers[rd] = imm_u;
             } else {
@@ -191,13 +205,14 @@ bool GoldenModelCPU::executeInstruction() {
         }
         
         case 0x03: {  // I-Type: Load instructions
-            std::cout << "LW: rd = x" << (int)rd 
-            << ", rs1 = x" << (int)rs1 
-            << ", imm_i = " << imm_i << " (0x" << std::hex << imm_i << std::dec << ")" 
-            << ", funct3 = 0b" << std::bitset<3>(funct3) << std::dec
-            << ", funct7 = 0b" << std::bitset<7>(funct7) << std::dec
-            << std::endl;
-
+            if (DEBUG_MODE) {
+                std::cout << "LW: rd = x" << (int)rd 
+                << ", rs1 = x" << (int)rs1 
+                << ", imm_i = " << imm_i << " (0x" << std::hex << imm_i << std::dec << ")" 
+                << ", funct3 = 0b" << std::bitset<3>(funct3) << std::dec
+                << ", funct7 = 0b" << std::bitset<7>(funct7) << std::dec
+                << std::endl;
+            }
             if (rd < REGISTER_LIMIT && rs1 < REGISTER_LIMIT) {
                 uint32_t addr = registers[rs1] + imm_i;
                 uint32_t word_addr = addr >> 2;
@@ -207,24 +222,28 @@ bool GoldenModelCPU::executeInstruction() {
                     uint32_t dmem_rdata = dmem[word_addr];
                     
                     if (funct3 == 0x2) {  // LW - Load word (32-bit)
-                        std::cout << "LW: rd = x" << (int)rd 
-                                    << ", rs1 = x" << (int)rs1 
-                                    << ", imm_i = " << imm_i 
-                                    << ", addr = 0x" << std::hex << addr << std::dec 
-                                    << " (word_index: 0x" << std::hex << word_addr << std::dec << ")"
-                                    << std::endl;
+                        if (DEBUG_MODE) {
+                            std::cout << "LW: rd = x" << (int)rd 
+                                        << ", rs1 = x" << (int)rs1 
+                                        << ", imm_i = " << imm_i 
+                                        << ", addr = 0x" << std::hex << addr << std::dec 
+                                        << " (word_index: 0x" << std::hex << word_addr << std::dec << ")"
+                                        << std::endl;
+                        }
                         if (rd != 0) {
                             registers[rd] = dmem_rdata;
                         }
                     } else if (funct3 == 0b100) {  // LBU - Load byte unsigned (8-bit)
                         //Load Byte Unsigned: Loads 8 bits from memory and zero-extends them to 32 bits.
                         //addr = R[rs1] + imm; R[rd] = {24'b0, M[addr][7:0]}
-                        std::cout << "LBU: rd = x" << (int)rd 
-                                    << ", rs1 = x" << (int)rs1 
-                                    << ", imm_i = " << imm_i 
-                                    << ", addr = 0x" << std::hex << addr << std::dec 
-                                    << " (word_index: 0x" << std::hex << word_addr << std::dec << ")"
-                                    << std::endl;
+                        if (DEBUG_MODE) {
+                            std::cout << "LBU: rd = x" << (int)rd 
+                                        << ", rs1 = x" << (int)rs1 
+                                        << ", imm_i = " << imm_i 
+                                        << ", addr = 0x" << std::hex << addr << std::dec 
+                                        << " (word_index: 0x" << std::hex << word_addr << std::dec << ")"
+                                        << std::endl;
+                        }
                         if (rd != 0) {
                             registers[rd] = (uint32_t)(dmem_rdata & 0x000000FF);
                         }
@@ -238,12 +257,14 @@ bool GoldenModelCPU::executeInstruction() {
         }
         
         case 0x23: {  // S-Type: Store instructions
-            std::cout << "STORE: rs1 = x" << (int)rs1 << "(0x" << std::hex << registers[rs1] << std::dec << ")"
-            << ", rs2 = x" << (int)rs2 << "(0x" << std::hex << registers[rs2] << std::dec << ")"
-            << ", imm_s = 0x" << std::hex << imm_s << std::dec 
-            << ", funct3 = 0b" << std::bitset<3>(funct3) << std::dec
-            << ", funct7 = 0b" << std::bitset<7>(funct7) << std::dec
-            << std::endl;
+            if (DEBUG_MODE) {
+                std::cout << "STORE: rs1 = x" << (int)rs1 << "(0x" << std::hex << registers[rs1] << std::dec << ")"
+                << ", rs2 = x" << (int)rs2 << "(0x" << std::hex << registers[rs2] << std::dec << ")"
+                << ", imm_s = 0x" << std::hex << imm_s << std::dec 
+                << ", funct3 = 0b" << std::bitset<3>(funct3) << std::dec
+                << ", funct7 = 0b" << std::bitset<7>(funct7) << std::dec
+                << std::endl;
+            }
             
             if (rs1 < REGISTER_LIMIT && rs2 < REGISTER_LIMIT) {
                 uint32_t addr = registers[rs1] + imm_s;
@@ -255,15 +276,19 @@ bool GoldenModelCPU::executeInstruction() {
                         // Store full 32-bit word
                         // funct3 = 0b010 (SW)
                         dmem[word_addr] = dmem_wdata;
-                        std::cout << "STORE: dmem[0x" << std::hex << addr << std::dec << "] = 0x" << std::hex << dmem_wdata << std::dec 
-                        << " (real addr >> 2: 0x" << std::hex << word_addr << std::dec << ")"
-                        << std::endl;
+                        if (DEBUG_MODE) {
+                            std::cout << "STORE: dmem[0x" << std::hex << addr << std::dec << "] = 0x" << std::hex << dmem_wdata << std::dec 
+                            << " (real addr >> 2: 0x" << std::hex << word_addr << std::dec << ")"
+                            << std::endl;
+                        }
                     } else if (funct3 == 0b000) {  // SB - Store byte (8-bit)
                         // Store Byte: Stores the lowest 8 bits of a register into memory.
                         // addr = R[rs1] + imm; M[addr] = R[rs2][7:0]
-                        std::cout << "SB: dmem[0x" << std::hex << addr << std::dec << "] = 0x" << std::hex << dmem_wdata << std::dec 
-                        << " (real addr >> 2: 0x" << std::hex << word_addr << std::dec << ")"
-                        << std::endl;
+                        if (DEBUG_MODE) {
+                            std::cout << "SB: dmem[0x" << std::hex << addr << std::dec << "] = 0x" << std::hex << dmem_wdata << std::dec 
+                            << " (real addr >> 2: 0x" << std::hex << word_addr << std::dec << ")"
+                            << std::endl;
+                        }
                         dmem[word_addr] = (uint32_t)(dmem_wdata & 0x000000FF);
                     } else {
                         std::cerr << "Error: Illegal function: funct3 = 0b" << std::bitset<3>(funct3) << std::endl;
@@ -281,9 +306,11 @@ bool GoldenModelCPU::executeInstruction() {
         }
         
         case 0x67: {  // I-Type: JALR
-            std::cout << "JALR: rd = x" << (int)rd 
-            << ", rs1 = x" << (int)rs1 
-            << ", imm_i = " << imm_i << std::endl;
+            if (DEBUG_MODE) {
+                std::cout << "JALR: rd = x" << (int)rd 
+                << ", rs1 = x" << (int)rs1 
+                << ", imm_i = " << imm_i << std::endl;
+            }
             
             if (funct3 == 0x0) {
                 if (rd < REGISTER_LIMIT && rs1 < REGISTER_LIMIT) {
@@ -295,9 +322,11 @@ bool GoldenModelCPU::executeInstruction() {
                     // throw std::runtime_error("Illegal register");
                 }
             }
-            std::cout << "JALR: pc_new = 0x" << std::hex << next_pc << std::dec 
-            << ", pc_saved pc + 4 = 0x" << std::hex << pc_plus4 << std::dec 
-            << " in register x" << (int)rd << std::endl;
+            if (DEBUG_MODE) {
+                std::cout << "JALR: pc_new = 0x" << std::hex << next_pc << std::dec 
+                << ", pc_saved pc + 4 = 0x" << std::hex << pc_plus4 << std::dec 
+                << " in register x" << (int)rd << std::endl;
+            }
             break;
         }
         

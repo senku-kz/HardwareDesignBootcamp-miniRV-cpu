@@ -1,5 +1,11 @@
+clear
+echo "Clearing screen..."
+
+echo "Removing obj_dir directory..."
 rm -rf obj_dir/
 
+
+echo "Compiling miniRV Verilog files..."
 verilator --cc \
   miniRV.sv \
   alu.sv \
@@ -13,12 +19,13 @@ verilator --cc \
   --top-module miniRV \
   --trace
 
-# Now link
+echo "Linking miniRV Verilog files..."
 make -C obj_dir -f VminiRV.mk
 
-echo "\n\nRunning miniRV testbench...\n\n"
+echo "\n\nRunning ./obj_dir/VminiRV\n\n"
 ./obj_dir/VminiRV
 
+# echo "Opening waveform_miniRV.vcd using GTKWave..."
 # gtkwave waveform_miniRV.vcd
 
 echo "\n\nSimulation complete. Waveform saved to waveform_miniRV.vcd\n\n"

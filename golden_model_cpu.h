@@ -7,7 +7,7 @@
 
 // Global cycle limit
 extern int CYCLE_LIMIT;
-
+extern bool DEBUG_MODE;
 class GoldenModelCPU {
 private:
     static constexpr size_t REGISTER_LIMIT = 16;

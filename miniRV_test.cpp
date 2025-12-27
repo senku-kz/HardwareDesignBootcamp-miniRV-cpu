@@ -11,6 +11,8 @@
 
 size_t REGISTER_LIMIT = 16;
 const std::string INSTRUCTION_MEMORY_FILE = "logisim-bin/test-pc4.hex";
+int TEST_CYCLE_LIMIT = 6;
+
 
 // Helper function to print instruction name
 const char* instruction_name(uint32_t instr) {
@@ -34,6 +36,7 @@ const char* instruction_name(uint32_t instr) {
     }
 }
 
+
 // Helper function to print register value (we'll need to access internal state)
 void print_registers(VminiRV* cpu, const char* label) {
     std::cout << "  " << label << ":\n";
@@ -41,9 +44,11 @@ void print_registers(VminiRV* cpu, const char* label) {
     // For now, we'll check through memory/PC observations
 }
 
+
 // Test helper: Run CPU for N cycles
 void run_cycles(VminiRV* cpu, VerilatedVcdC* tfp, uint64_t& time, int cycles) {
     for (int i = 0; i < cycles; i++) {
+        // std::cout << "miniRV cpu pc in run_cycles: " << cpu->pc << "\n";
         cpu->clk = 0;
         cpu->eval();
         tfp->dump(time++);
@@ -51,16 +56,22 @@ void run_cycles(VminiRV* cpu, VerilatedVcdC* tfp, uint64_t& time, int cycles) {
         cpu->clk = 1;
         cpu->eval();
         tfp->dump(time++);
+
+        // std::cout << "miniRV cpu pc after clock cycle in run_cycles: " << cpu->pc << "\n";
     }
 }
 
 
 bool compare_cpus(VminiRV* miniRV_cpu, GoldenModelCPU* golden_cpu, int cycle) {
     
+    std::cout << "cycle in compare_cpus: \t" << cycle << "\n";
+    std::cout << "\t golden model pc in compare_cpus: \t 0x" << std::hex << std::setfill('0') << std::setw(8) << golden_cpu->pc << std::dec << "\n";
+    std::cout << "\t miniRV cpu pc in compare_cpus: \t 0x" << std::hex << std::setfill('0') << std::setw(8) << miniRV_cpu->pc << std::dec << "\n";
+
     // Compare PC (32-bit value)
-    uint32_t designed_pc = miniRV_cpu->pc_;
+    uint32_t designed_pc = miniRV_cpu->pc;
     uint32_t golden_pc = golden_cpu->pc;
-    
+   
     if (designed_pc != golden_pc) {
         std::cout << "  err Cycle " << std::setw(3) << cycle << ": PC mismatch - Designed CPU: 0x" 
                   << std::hex << std::setfill('0') << std::setw(8) << designed_pc << std::dec
@@ -83,8 +94,10 @@ bool compare_cpus(VminiRV* miniRV_cpu, GoldenModelCPU* golden_cpu, int cycle) {
         }
     }
 
+    std::cout << "\t compare_cpus returned true\n\n";
     return true;
 }
+
 
 int main(int argc, char** argv) {
     uint64_t time = 0;
@@ -106,27 +119,46 @@ int main(int argc, char** argv) {
     GoldenModelCPU golden_cpu;
     golden_cpu.loadHexFile(INSTRUCTION_MEMORY_FILE);
     golden_cpu.resetCPU();
-    golden_cpu.clockCycle();
+
   
   
-    // Initialize CPU
-    miniRV_cpu->clk = 0;
-    miniRV_cpu->reset = 0;
-    miniRV_cpu->eval();
-    tfp->dump(time++);
+    // Initialize CPU - perform reset
+    miniRV_cpu->reset = 1;  // Active high reset
+    run_cycles(miniRV_cpu, tfp, time, 1);
+
+    // Release reset
+    miniRV_cpu->reset = 0;  // Deactivate reset
   
     
     std::cout << "Testing miniRV CPU\n";
     std::cout << "==================\n\n";
+
+    std::cout << "\t golden model pc after reset: \t" << golden_cpu.pc << "\n";
+    std::cout << "\t miniRV cpu pc after reset: \t" << miniRV_cpu->pc << "\n\n";
+
+    test_result = compare_cpus(miniRV_cpu, &golden_cpu, 0);
+    if (!test_result) {
+        std::cout << "  err Cycle 0: CPU mismatch\n";
+        throw std::runtime_error("CPU mismatch");
+    }
+    test_success++;
+    test_count++;
   
-    for (int i = 0; i < 6000; i++) {
+    for (int i = 0; i < TEST_CYCLE_LIMIT; i++) {
+        std::cout << "\n======================\n";
+        // Execute one clock cycle on both CPUs
         golden_cpu.clockCycle();
         run_cycles(miniRV_cpu, tfp, time, 1);
 
-        if (!compare_cpus(miniRV_cpu, &golden_cpu, i)) {
-            std::cout << "  err Cycle " << std::setw(3) << i << ": CPU mismatch\n";
-            break;
+        // Compare states after clock cycle
+        test_result = compare_cpus(miniRV_cpu, &golden_cpu, i+1);
+        if (!test_result) {
+            std::cout << "  err Cycle " << std::setw(3) << i+1 << ": CPU mismatch\n";
+            throw std::runtime_error("CPU mismatch");
         }
+        
+        test_success++;
+        test_count++;
     }
 
     std::cout << "\n";
@@ -144,4 +176,3 @@ int main(int argc, char** argv) {
     
     return (test_success == test_count) ? 0 : 1;
 }
-
