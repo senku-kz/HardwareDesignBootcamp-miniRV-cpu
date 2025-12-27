@@ -16,9 +16,10 @@ verilator --cc \
 # Now link
 make -C obj_dir -f VminiRV.mk
 
+echo "\n\nRunning miniRV testbench...\n\n"
 ./obj_dir/VminiRV
 
-# gtkwave waveform_cpu.vcd
+# gtkwave waveform_miniRV.vcd
 
-echo "Simulation complete. Waveform saved to waveform_cpu.vcd"
-echo "You can view it using GTKWave: gtkwave waveform_cpu.vcd"
+echo "\n\nSimulation complete. Waveform saved to waveform_miniRV.vcd\n\n"
+echo "You can view it using GTKWave: gtkwave waveform_miniRV.vcd\n\n"
