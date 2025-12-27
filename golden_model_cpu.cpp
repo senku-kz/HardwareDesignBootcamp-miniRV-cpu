@@ -12,6 +12,7 @@
 // This is a functional C++ model that executes instructions from hex files
 int CYCLE_LIMIT = 6000;
 
+
 // GoldenModelCPU class implementation
 
 // Constructor
@@ -26,6 +27,7 @@ GoldenModelCPU::GoldenModelCPU() : clock(false), reset(false), pc(0) {
     memset(dmem, 0, sizeof(dmem));
 }
     
+
 // Load instructions from hex file (Logisim format)
 bool GoldenModelCPU::loadHexFile(const std::string& filename) {
     std::ifstream file(filename);
@@ -97,6 +99,7 @@ void GoldenModelCPU::resetCPU() {
     }
     reset = false;
 }
+
 
 // Execute one instruction (single cycle)
 bool GoldenModelCPU::executeInstruction() {
@@ -313,6 +316,7 @@ bool GoldenModelCPU::executeInstruction() {
     return true;
 }
 
+
 // Clock cycle: execute one instruction
 void GoldenModelCPU::clockCycle() {
     if (!reset) {
@@ -322,12 +326,14 @@ void GoldenModelCPU::clockCycle() {
     }
 }
 
+
 // Run CPU for N cycles
 void GoldenModelCPU::runCycles(int cycles) {
     for (int i = 0; i < cycles; i++) {
         clockCycle();
     }
 }
+
 
 // Print CPU state
 void GoldenModelCPU::printState() {
@@ -343,6 +349,7 @@ void GoldenModelCPU::printState() {
     if (REGISTER_LIMIT % 4 != 0) std::cout << "\n";
 }
 
+
 // Get instruction at address
 uint32_t GoldenModelCPU::getInstruction(uint32_t addr) {
     uint32_t word_index = addr >> 2;
@@ -352,67 +359,12 @@ uint32_t GoldenModelCPU::getInstruction(uint32_t addr) {
     return 0;
 }
 
+
 // Read data from memory
 uint32_t GoldenModelCPU::readMem(uint32_t addr) {
     uint32_t word_addr = addr >> 2;
     if (word_addr < DMEM_SIZE) {
         return dmem[word_addr];  // Direct word access (32-bit data width)
     }
-    return 0;
-}
-
-// Example usage
-int main(int argc, char** argv) {
-    std::string hex_file = "logisim-bin/sum.hex";
-    if (argc > 1) {
-        hex_file = argv[1];
-    }
-    
-    GoldenModelCPU cpu;
-    
-    // Load instructions into instruction memory
-    std::cout << "Loading instructions from " << hex_file << " into instruction memory...\n";
-    if (!cpu.loadHexFile(hex_file)) {
-        return 1;
-    }
-    for (int i = 0; i < 10; i++) {
-        std::cout << "imem[" << i << "] = 0x" << std::hex << std::setfill('0') << std::setw(8) 
-                  << cpu.imem[i] << std::dec << std::endl;
-    }
-    
-    // Also load data into data memory (as per requirement: hex file contains both instructions and data)
-    std::cout << "Loading data from " << hex_file << " into data memory...\n";
-    // if (!cpu.loadHexFileToDmem(hex_file)) {
-    //     return 1;
-    // }
-    for (int i = 0; i < 10; i++) {
-        std::cout << "dmem[" << i << "] = 0x" << std::hex << std::setfill('0') << std::setw(8) 
-                  << cpu.dmem[i] << std::dec << std::endl;
-    }
-    
-    // Reset CPU
-    cpu.resetCPU();
-    
-    // Print initial state
-    std::cout << "\nInitial state:\n";
-    cpu.printState();
-    
-    // Run for a few cycles (or until program ends)
-    // std::cout << "\nExecuting instructions...\n";
-    // cpu.runCycles(100);  // Execute 100 instructions
-    std::cout << "--------------------------------\n";
-    std::cout << "Executing instructions...\n";
-    for (int i = 0; i < CYCLE_LIMIT; i++) {
-        std::cout << "Cycle " << i+1 << "\n";
-        cpu.clockCycle();
-        cpu.printState();
-        std::cout << "\n";
-    }
-    std::cout << "--------------------------------\n";
-    
-    // Print final state
-    std::cout << "\nFinal state:\n";
-    cpu.printState();
-    
     return 0;
 }

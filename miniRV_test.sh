@@ -13,6 +13,7 @@ verilator --cc \
   --top-module miniRV \
   --trace
 
+# Now link
 make -C obj_dir -f VminiRV.mk
 
 ./obj_dir/VminiRV
