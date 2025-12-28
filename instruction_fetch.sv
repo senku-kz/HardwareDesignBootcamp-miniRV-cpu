@@ -7,7 +7,7 @@ module instruction_fetch(
     parameter MEMORY_SIZE = 32;
     logic [31:0] memory [0:MEMORY_SIZE-1];
 
-    parameter INSTRUCTION_MEMORY_FILE = "logisim-bin/test-pc4.hex";
+    parameter INSTRUCTION_MEMORY_FILE = "logisim-bin/sum.hex";
 
     // Initialize the instruction memory with example program:
     // Program: Load immediates, add them, and loop

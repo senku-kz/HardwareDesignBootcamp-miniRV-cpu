@@ -11,7 +11,7 @@
 // Golden Model CPU for miniRV (RISC-V RV32E subset)
 // This is a functional C++ model that executes instructions from hex files
 int CYCLE_LIMIT = 6000;
-
+std::string INSTRUCTION_MEMORY_FILE = "logisim-bin/sum.hex";
 bool DEBUG_MODE = false;
 
 // GoldenModelCPU class implementation
@@ -26,14 +26,28 @@ GoldenModelCPU::GoldenModelCPU() : clock(false), reset(false), pc(0) {
     // Initialize memories
     memset(imem, 0, sizeof(imem));
     memset(dmem, 0, sizeof(dmem));
+
+    pc = 0;
+    // loadHexFile(INSTRUCTION_MEMORY_FILE);
 }
     
 
 // Load instructions from hex file (Logisim format)
 bool GoldenModelCPU::loadHexFile(const std::string& filename) {
+    if (DEBUG_MODE) {
+        std::cout << "Loading instructions from " << filename << " into instruction memory...\n";
+    }
+    
     std::ifstream file(filename);
     if (!file.is_open()) {
         std::cerr << "Error: Cannot open file " << filename << std::endl;
+        return false;
+    }
+
+    std::string memh_filename = filename.substr(0, filename.find(".")) + ".memh";
+    std::ofstream memh_file(memh_filename);
+    if (!memh_file.is_open()) {
+        std::cerr << "Error: Cannot create file " << memh_filename << std::endl;
         return false;
     }
     
@@ -76,6 +90,8 @@ bool GoldenModelCPU::loadHexFile(const std::string& filename) {
             if (word_addr < IMEM_SIZE) {
                 imem[word_addr] = instr;
                 dmem[word_addr] = instr;
+
+                memh_file << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << instr << std::endl;
             } else {
                 std::cerr << "Warning: Instruction address " << word_addr 
                             << " exceeds memory size" << std::endl;
@@ -87,6 +103,13 @@ bool GoldenModelCPU::loadHexFile(const std::string& filename) {
     }
     
     file.close();
+    memh_file.close();
+
+    if (DEBUG_MODE) {
+        std::cout << "Instructions loaded successfully from " << filename << "\n";
+        this->readMem();
+    }
+
     return true;
 }
 
@@ -380,20 +403,22 @@ void GoldenModelCPU::printState() {
 
 
 // Get instruction at address
-uint32_t GoldenModelCPU::getInstruction(uint32_t addr) {
-    uint32_t word_index = addr >> 2;
-    if (word_index < IMEM_SIZE) {
-        return imem[word_index];
-    }
-    return 0;
+uint32_t GoldenModelCPU::getInstruction() {
+    return imem[pc >> 2];
 }
 
 
 // Read data from memory
-uint32_t GoldenModelCPU::readMem(uint32_t addr) {
-    uint32_t word_addr = addr >> 2;
-    if (word_addr < DMEM_SIZE) {
-        return dmem[word_addr];  // Direct word access (32-bit data width)
+void GoldenModelCPU::readMem() {
+    std::cout << "Reading instructions from memory...\n";
+    for ( int i =0; i < 10; i++) {
+        std::cout << "imem[" << i << "] = 0x" << std::hex << std::setfill('0') << std::setw(8) 
+                  << imem[i] << std::dec << std::endl;
     }
-    return 0;
+
+    std::cout << "Reading data from data memory...\n";
+    for ( int i =0; i < 10; i++) {
+        std::cout << "dmem[" << i << "] = 0x" << std::hex << std::setfill('0') << std::setw(8) 
+                  << dmem[i] << std::dec << std::endl;
+    }
 }

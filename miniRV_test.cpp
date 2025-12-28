@@ -10,7 +10,6 @@
 #include "golden_model_cpu.h"
 
 size_t REGISTER_LIMIT = 16;
-const std::string INSTRUCTION_MEMORY_FILE = "logisim-bin/test-pc4.hex";
 int TEST_CYCLE_LIMIT = 6;
 
 
@@ -65,19 +64,31 @@ void run_cycles(VminiRV* cpu, VerilatedVcdC* tfp, uint64_t& time, int cycles) {
 bool compare_cpus(VminiRV* miniRV_cpu, GoldenModelCPU* golden_cpu, int cycle) {
     
     std::cout << "cycle in compare_cpus: \t" << cycle << "\n";
-    std::cout << "\t golden model pc in compare_cpus: \t 0x" << std::hex << std::setfill('0') << std::setw(8) << golden_cpu->pc << std::dec << "\n";
-    std::cout << "\t miniRV cpu pc in compare_cpus: \t 0x" << std::hex << std::setfill('0') << std::setw(8) << miniRV_cpu->pc << std::dec << "\n";
+    // std::cout << "\t golden model pc in compare_cpus: \t 0x" << std::hex << std::setfill('0') << std::setw(8) << golden_cpu->pc << std::dec << "\n";
+    // std::cout << "\t miniRV cpu pc in compare_cpus: \t 0x" << std::hex << std::setfill('0') << std::setw(8) << miniRV_cpu->pc << std::dec << "\n";
 
     // Compare PC (32-bit value)
     uint32_t designed_pc = miniRV_cpu->pc;
     uint32_t golden_pc = golden_cpu->pc;
-   
     if (designed_pc != golden_pc) {
         std::cout << "  err Cycle " << std::setw(3) << cycle << ": PC mismatch - Designed CPU: 0x" 
                   << std::hex << std::setfill('0') << std::setw(8) << designed_pc << std::dec
                   << ", Golden CPU: 0x" << std::hex << std::setfill('0') << std::setw(8) << golden_pc << std::dec << "\n";
         throw std::runtime_error("PC mismatch");
     }
+    std::cout << "\t designed pc: 0x" << std::hex << std::setfill('0') << std::setw(8) << designed_pc << std::dec << "\n";
+    std::cout << "\t golden pc: 0x" << std::hex << std::setfill('0') << std::setw(8) << golden_pc << std::dec << "\n";
+
+    uint32_t designed_instruction = miniRV_cpu->instruction;
+    uint32_t golden_instruction = golden_cpu->getInstruction();
+    if (designed_instruction != golden_instruction) {
+        std::cout << "  err Cycle " << std::setw(3) << cycle << ": Instruction mismatch - Designed CPU: 0x" 
+                  << std::hex << std::setfill('0') << std::setw(8) << designed_instruction << std::dec
+                  << ", Golden CPU: 0x" << std::hex << std::setfill('0') << std::setw(8) << golden_instruction << std::dec << "\n";
+        throw std::runtime_error("Instruction mismatch");
+    }
+    std::cout << "\t designed instruction: 0x" << std::hex << std::setfill('0') << std::setw(8) << designed_instruction << std::dec << " " << instruction_name(designed_instruction) << "\n";
+    std::cout << "\t golden instruction: 0x" << std::hex << std::setfill('0') << std::setw(8) << golden_instruction << std::dec << " " << instruction_name(golden_instruction) << "\n";
     
     // Compare all registers
     uint32_t miniRV_registers[REGISTER_LIMIT];
@@ -105,6 +116,9 @@ int main(int argc, char** argv) {
     int test_count = 0;
     int test_success = 0;
  
+    // Set instruction memory file for this test
+    INSTRUCTION_MEMORY_FILE = "logisim-bin/sum.hex";
+ 
     // Initialize Verilator
     Verilated::commandArgs(argc, argv);
     Verilated::traceEverOn(true);
@@ -118,8 +132,8 @@ int main(int argc, char** argv) {
     // Create golden model CPU
     GoldenModelCPU golden_cpu;
     golden_cpu.loadHexFile(INSTRUCTION_MEMORY_FILE);
+    golden_cpu.readMem();
     golden_cpu.resetCPU();
-
   
   
     // Initialize CPU - perform reset
@@ -156,7 +170,7 @@ int main(int argc, char** argv) {
             std::cout << "  err Cycle " << std::setw(3) << i+1 << ": CPU mismatch\n";
             throw std::runtime_error("CPU mismatch");
         }
-        
+
         test_success++;
         test_count++;
     }

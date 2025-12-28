@@ -68,6 +68,11 @@ module miniRV (
         .pc_out(pc)
     );
 
+    instruction_fetch u_instruction_fetch (
+        .address(pc),
+        .instruction(instruction)
+    );
+
     // assign pc = _pc;
     
     // // ========== Component Instantiation ==========

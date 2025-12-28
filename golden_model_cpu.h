@@ -8,6 +8,7 @@
 // Global cycle limit
 extern int CYCLE_LIMIT;
 extern bool DEBUG_MODE;
+extern std::string INSTRUCTION_MEMORY_FILE;
 class GoldenModelCPU {
 private:
     static constexpr size_t REGISTER_LIMIT = 16;
@@ -48,10 +49,10 @@ public:
     void printState();
     
     // Get instruction at address
-    uint32_t getInstruction(uint32_t addr);
+    uint32_t getInstruction();
     
     // Read data from memory
-    uint32_t readMem(uint32_t addr);
+    void readMem();
 };
 
 #endif // GOLDEN_MODEL_CPU_H
