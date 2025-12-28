@@ -132,6 +132,7 @@ int main(int argc, char** argv) {
     // Create golden model CPU
     GoldenModelCPU golden_cpu;
     golden_cpu.loadHexFile(INSTRUCTION_MEMORY_FILE);
+    // after loading the instructions, it is also save new memh file in the same directory
     golden_cpu.readMem();
     golden_cpu.resetCPU();
   
