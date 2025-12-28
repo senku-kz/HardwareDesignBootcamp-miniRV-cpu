@@ -32,6 +32,7 @@ module miniRV (
     logic [2:0]  funct3;
     logic [6:0]  funct7;
     logic [31:0] imm_i, imm_s, imm_u;
+    logic [31:0] imm_32bit;
     
     // Register file signals
     logic        reg_write;
@@ -55,6 +56,7 @@ module miniRV (
     // Memory read data processing
     logic [31:0] mem_rdata_processed;
     logic [1:0]  byte_offset;
+    logic [31:0] mem_rdata;
     
     // JALR target
     logic [31:0] jalr_target;
@@ -73,133 +75,87 @@ module miniRV (
         .instruction(instruction)
     );
 
-    // assign pc = _pc;
-    
-    // // ========== Component Instantiation ==========
-    
-    // // 1. Instruction Memory (ROM)
-    // instruction_fetch u_instruction_fetch (
-    //     .address(imem_addr),
-    //     .instruction(imem_rdata)
-    // );
-    // assign instruction = imem_rdata;
-    
-    // // 2. Control Unit (Instruction Decoder)
-    // logic [1:0] wb_sel_cu;  // wb_sel from control_unit (not used, we generate our own)
-    // control_unit u_control_unit (
-    //     .instruction(instruction),
-    //     .opcode(opcode),
-    //     .register_destination(rd),
-    //     .register_source_1(rs1),
-    //     .register_source_2(rs2),
-    //     .function_3(funct3),
-    //     .function_7(funct7),
-    //     .immediate_7bit(),
-    //     .immediate_12bit(),
-    //     .immediate_20bit(),
-    //     .immediate_32bit(),  // Not used, we use immediate_generator
-    //     .wb_sel(wb_sel_cu)   // Not used, we generate our own
-    // );
-    
-    // // 3. Immediate Generator
-    // immediate_generator u_immediate_generator (
-    //     .instruction(instruction),
-    //     .imm_i(imm_i),
-    //     .imm_s(imm_s),
-    //     .imm_u(imm_u)
-    // );
-    
-    // // ========== Control Logic ==========
-    // // Check for illegal registers (x16-x31)
-    // assign illegal_reg = (rd[4] | rs1[4] | rs2[4]);
+    control_unit u_control_unit (
+        .instruction(instruction),
+        .opcode(opcode),
+        .register_destination(rd),
+        .register_source_1(rs1),
+        .register_source_2(rs2),
+        .function_3(funct3),
+        .function_7(funct7),
+        .immediate_7bit(),
+        .immediate_12bit(),
+        .immediate_20bit(),
+        .immediate_32bit(imm_32bit),
+        .wb_sel(wb_sel)
+    );
+
+    writeback_mux u_writeback_mux (
+        .alu_result(alu_result),
+        .mem_rdata(mem_rdata),
+        .pc_plus4(_pc_plus4),
+        .imm_u(imm_32bit),
+        .wb_sel(wb_sel),
+
+        .wb_data(wb_data)
+    );
+
+
+    register_file u_register_file (
+        .clk(clk),
+        .reset(reset),
+        .we(reg_write),
+        .raddr1(rs1),
+        .raddr2(rs2),
+        .waddr(rd),
+        .wdata(wb_data),
+
+        .rdata1(rs1_data),
+        .rdata2(rs2_data)
+    );
+
+
+    alu u_alu (
+        .operand_a(rs1_data),
+        .operand_b(rs2_data),
+        .function_3(funct3),
+        .function_7(funct7),
+
+        .result(alu_result)
+    );
+
     
     // // Control signals generation
     // always_comb begin
-    //     // Default values
-    //     reg_write = 1'b0;
-    //     alu_src = 1'b0;
-    //     pc_src = 1'b0;
-    //     mem_read = 1'b0;
-    //     mem_write = 1'b0;
-    //     is_lbu = 1'b0;
-    //     is_sb = 1'b0;
-    //     illegal_instr = 1'b0;
-    //     wb_sel = 2'b00;
-        
-    //     case (opcode)
-    //         // R-Type: ADD (0110011)
-    //         7'b0110011: begin
-    //             if (funct3 == 3'b000 && funct7 == 7'b0000000) begin
-    //                 reg_write = 1'b1;
-    //                 alu_src = 1'b0;  // Use rs2
-    //                 wb_sel = 2'b00;  // ALU result
-    //             end else begin
-    //                 illegal_instr = 1'b1;
-    //             end
-    //         end
-            
-    //         // I-Type: ADDI, LW, LBU, JALR
-    //         7'b0010011: begin
-    //             // ADDI
-    //             if (funct3 == 3'b000) begin
-    //                 reg_write = 1'b1;
-    //                 alu_src = 1'b1;  // Use imm_i
-    //                 wb_sel = 2'b00;  // ALU result
-    //             end else begin
-    //                 illegal_instr = 1'b1;
-    //             end
-    //         end
-            
-    //         7'b0000011: begin
-    //             // Load instructions
-    //             mem_read = 1'b1;
+    //     case (wb_sel)
+    //         2'b00: begin
+    //             // ALU result
+    //             rs1_data
+    //             rs2_data
+    //             funct3
+    //             funct7
+    //             alu_result
+
+
+
     //             reg_write = 1'b1;
-    //             alu_src = 1'b1;  // Use imm_i for address
-    //             wb_sel = 2'b01;  // Memory data
-                
-    //             if (funct3 == 3'b010) begin
-    //                 // LW
-    //                 is_lbu = 1'b0;
-    //             end else if (funct3 == 3'b100) begin
-    //                 // LBU
-    //                 is_lbu = 1'b1;
-    //             end else begin
-    //                 illegal_instr = 1'b1;
-    //             end
+    //             alu_src = 1'b0;
     //         end
             
-    //         7'b1100111: begin
+    //         2'b01: begin
+
+    //         end
+            
+    //         2'b10: begin
+
+    //         end
+            
+    //         2'b11: begin
     //             // JALR
-    //             if (funct3 == 3'b000) begin
-    //                 reg_write = 1'b1;
-    //                 alu_src = 1'b1;  // Use imm_i
-    //                 pc_src = 1'b1;   // Jump
-    //                 wb_sel = 2'b10;  // PC+4
-    //             end else begin
-    //                 illegal_instr = 1'b1;
-    //             end
-    //         end
-            
-    //         // S-Type: SW, SB
-    //         7'b0100011: begin
-    //             mem_write = 1'b1;
-    //             alu_src = 1'b1;  // Use imm_s for address
-                
-    //             if (funct3 == 3'b010) begin
-    //                 // SW
-    //                 is_sb = 1'b0;
-    //             end else if (funct3 == 3'b000) begin
-    //                 // SB
-    //                 is_sb = 1'b1;
-    //             end else begin
-    //                 illegal_instr = 1'b1;
-    //             end
-    //         end
-            
-    //         // U-Type: LUI
-    //         7'b0110111: begin
     //             reg_write = 1'b1;
-    //             wb_sel = 2'b11;  // imm_u
+    //             alu_src = 1'b1;  // Use imm_i
+    //             pc_src = 1'b1;   // Jump
+    //             wb_sel = 2'b10;  // PC+4
     //         end
             
     //         default: begin

@@ -79,6 +79,7 @@ bool compare_cpus(VminiRV* miniRV_cpu, GoldenModelCPU* golden_cpu, int cycle) {
     std::cout << "\t designed pc: 0x" << std::hex << std::setfill('0') << std::setw(8) << designed_pc << std::dec << "\n";
     std::cout << "\t golden pc: 0x" << std::hex << std::setfill('0') << std::setw(8) << golden_pc << std::dec << "\n";
 
+    // Compare instruction
     uint32_t designed_instruction = miniRV_cpu->instruction;
     uint32_t golden_instruction = golden_cpu->getInstruction();
     if (designed_instruction != golden_instruction) {
